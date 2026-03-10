@@ -16,5 +16,12 @@ export const env = {
   REDIS_PASSWORD: process.env.REDIS_PASSWORD || undefined,
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
   TELEGRAM_DEFAULT_CHAT_ID: process.env.TELEGRAM_DEFAULT_CHAT_ID,
+   SMTP_HOST: process.env.SMTP_HOST,
+   SMTP_PORT: process.env.SMTP_PORT
+    ? parseInt(process.env.SMTP_PORT, 10)
+    : undefined,
+   SMTP_USER: process.env.SMTP_USER,
+   SMTP_PASS: process.env.SMTP_PASS,
+   SMTP_FROM: process.env.SMTP_FROM,
 };
 

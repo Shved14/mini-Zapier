@@ -1,8 +1,7 @@
 import { prisma } from "../config/prisma";
 import { WorkflowRunStatus } from "@prisma/client";
 import { logger } from "../utils/logger";
-import axios from "axios";
-import { env } from "../config/env";
+import { actionRegistry } from "../actions/actionRegistry";
 
 export type WorkflowNode = {
   id: string;
@@ -28,215 +27,6 @@ export type StepExecutorContext = {
 };
 
 export type StepExecutor = (ctx: StepExecutorContext) => Promise<unknown>;
-
-const stepExecutors: Record<string, StepExecutor> = {};
-
-export const registerStepExecutor = (type: string, executor: StepExecutor) => {
-  stepExecutors[type] = executor;
-};
-
-const getByPath = (obj: unknown, path: string): unknown => {
-  if (obj === null || obj === undefined) return undefined;
-  if (!path) return obj;
-
-  const segments = path.split(".");
-  let current: any = obj;
-
-  for (const seg of segments) {
-    if (current == null) return undefined;
-    current = current[seg];
-  }
-
-  return current;
-};
-
-const interpolateTemplate = (
-  template: string,
-  context: Record<string, unknown>
-): string => {
-  return template.replace(/{{\s*([^}]+)\s*}}/g, (_match, rawPath) => {
-    const path = String(rawPath).trim();
-    const value = getByPath(context, path);
-    if (value === undefined || value === null) {
-      return "";
-    }
-    if (typeof value === "object") {
-      try {
-        return JSON.stringify(value);
-      } catch {
-        return "";
-      }
-    }
-    return String(value);
-  });
-};
-
-/**
- * HTTP executor
- * config:
- * {
- *   method?: "GET" | "POST" | ... (по умолчанию "GET")
- *   url: string
- *   headers?: Record<string, string>
- *   query?: Record<string, string | number>
- *   body?: any            // если не задано, можно использовать input
- * }
- */
-registerStepExecutor("http", async ({ node, input }) => {
-  const cfg = (node.config ?? {}) as {
-    method?: string;
-    url?: string;
-    headers?: Record<string, string>;
-    query?: Record<string, string | number>;
-    body?: unknown;
-  };
-
-  if (!cfg.url) {
-    throw new Error(`HTTP node "${node.id}" is missing "url" in config`);
-  }
-
-  const method = (cfg.method ?? "GET").toUpperCase();
-
-  const response = await axios.request({
-    method,
-    url: cfg.url,
-    headers: cfg.headers,
-    params: cfg.query,
-    data: cfg.body !== undefined ? cfg.body : input,
-    validateStatus: () => true,
-  });
-
-  if (response.status >= 400) {
-    throw new Error(
-      `HTTP request failed with status ${response.status}: ${JSON.stringify(
-        response.data
-      )}`
-    );
-  }
-
-  return {
-    status: response.status,
-    headers: response.headers,
-    data: response.data,
-  };
-});
-
-/**
- * Transform executor
- * config:
- * {
- *   mode?: "pick" | "map" (по умолчанию "pick")
- *   fields?: string[]      // для "pick": взять указанные ключи из объекта input
- *   map?: Record<string, string> // для "map": outKey -> inPath (dot-notation)
- *   mapping?: Record<string, string> // alias для map, чтобы совпасть с JSON из примера
- * }
- */
-registerStepExecutor("transform", async ({ node, input }) => {
-  const cfg = (node.config ?? {}) as {
-    mode?: "pick" | "map";
-    fields?: string[];
-    map?: Record<string, string>;
-    mapping?: Record<string, string>;
-  };
-
-  const mode = cfg.mode ?? "pick";
-
-  if (input === null || typeof input !== "object") {
-    // если нечего трансформировать — просто вернуть как есть
-    return input;
-  }
-
-  if (mode === "pick" && Array.isArray(cfg.fields)) {
-    const out: Record<string, unknown> = {};
-    for (const key of cfg.fields) {
-      const value = getByPath(input, key);
-      if (value !== undefined) {
-        out[key] = value;
-      }
-    }
-    return out;
-  }
-
-  if (mode === "map" && (cfg.map || cfg.mapping)) {
-    const mapping = cfg.map ?? cfg.mapping ?? {};
-    const out: Record<string, unknown> = {};
-    for (const [outKey, inPath] of Object.entries(mapping)) {
-      out[outKey] = getByPath(input, inPath);
-    }
-    return out;
-  }
-
-  // по умолчанию — прозрачно
-  return input;
-});
-
-/**
- * Telegram executor
- * config:
- * {
- *   chatId?: string                 // если не указан — берём env.TELEGRAM_DEFAULT_CHAT_ID
- *   text?: string                   // если не указан — сериализуем input
- *   parseMode?: "MarkdownV2" | "HTML"
- * }
- */
-registerStepExecutor("telegram", async ({ node, input }) => {
-  const cfg = (node.config ?? {}) as {
-    chatId?: string;
-    text?: string;
-    parseMode?: "MarkdownV2" | "HTML";
-  };
-
-  const token = env.TELEGRAM_BOT_TOKEN;
-  if (!token) {
-    throw new Error("TELEGRAM_BOT_TOKEN is not configured");
-  }
-
-  const chatId = cfg.chatId ?? env.TELEGRAM_DEFAULT_CHAT_ID;
-  if (!chatId) {
-    throw new Error(
-      `Telegram node "${node.id}" has no chatId and TELEGRAM_DEFAULT_CHAT_ID is not set`
-    );
-  }
-
-  const context =
-    input && typeof input === "object" ? (input as Record<string, unknown>) : {};
-
-  let text =
-    cfg.text ??
-    "Workflow output:\n" + "```json\n" + JSON.stringify(input, null, 2) + "\n```";
-
-  // Поддержка шаблонов {{path.to.field}} в тексте
-  text = interpolateTemplate(text, context);
-
-  const url = `https://api.telegram.org/bot${token}/sendMessage`;
-
-  const response = await axios.post(url, {
-    chat_id: chatId,
-    text,
-    parse_mode: cfg.parseMode,
-  });
-
-  if (response.status >= 400 || !response.data.ok) {
-    throw new Error(
-      `Telegram sendMessage failed: ${response.status} ${JSON.stringify(
-        response.data
-      )}`
-    );
-  }
-
-  return {
-    messageId: response.data.result.message_id,
-    chatId,
-  };
-});
-
-const getExecutorForNode = (node: WorkflowNode): StepExecutor => {
-  const executor = stepExecutors[node.type];
-  if (!executor) {
-    throw new Error(`No executor registered for node type "${node.type}"`);
-  }
-  return executor;
-};
 
 const buildGraphHelpers = (definition: WorkflowDefinition) => {
   const nodeMap = new Map<string, WorkflowNode>();
@@ -334,15 +124,23 @@ export const executeWorkflowRun = async (params: {
       let status = "success";
       let errorMessage: string | null = null;
       let output: unknown = null;
+      const stepInput = currentInput;
 
       try {
-        const executor = getExecutorForNode(node);
-        output = await executor({
-          workflowId,
-          runId: run.id,
-          node,
-          input: currentInput,
-        });
+        const executor = actionRegistry[node.type];
+        if (!executor) {
+          throw new Error(`Unknown action type "${node.type}"`);
+        }
+
+        const result = await executor(node.config ?? {}, stepInput);
+
+        if (!result.success) {
+          throw new Error(
+            `Action executor for type "${node.type}" returned success=false`
+          );
+        }
+
+        output = result.output;
         currentInput = output;
       } catch (err) {
         status = "failed";
@@ -357,7 +155,7 @@ export const executeWorkflowRun = async (params: {
           stepId: node.id,
           stepType: node.type,
           status,
-          input: currentInput as any,
+          input: stepInput as any,
           output: output as any,
           error: errorMessage ?? undefined,
           createdAt: startedAt,
