@@ -2,6 +2,7 @@ import { prisma } from "../config/prisma";
 import { WorkflowRunStatus } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { actionRegistry } from "../actions/actionRegistry";
+import { logService } from "./logService";
 
 export type WorkflowNode = {
   id: string;
@@ -69,13 +70,13 @@ export const executeWorkflowRun = async (params: {
   const { workflowId, payload } = params;
 
   // 1. Создаём запись WorkflowRun со статусом running
-  const run = await prisma.workflowRun.create({
-    data: {
-      workflowId,
-      status: WorkflowRunStatus.running,
-      startedAt: new Date(),
-    },
-  });
+  const run = await logService.createRun(workflowId);
+  const stepTimings: Array<{
+    stepId: string;
+    stepType: string;
+    status: "success" | "failed";
+    durationMs: number;
+  }> = [];
 
   try {
     // 2. Загружаем последнюю версию workflow
@@ -96,14 +97,8 @@ export const executeWorkflowRun = async (params: {
 
     if (startNodeIds.length === 0) {
       logger.warn("Workflow has no start nodes", { workflowId });
-      await prisma.workflowRun.update({
-        where: { id: run.id },
-        data: {
-          status: WorkflowRunStatus.success,
-          finishedAt: new Date(),
-        },
-      });
-      return { runId: run.id };
+      await logService.finishRunSuccess(run.id);
+      return { runId: run.id, steps: stepTimings };
     }
 
     // 3. Топологический обход графа (sequental, 1 нода за раз)
@@ -121,10 +116,16 @@ export const executeWorkflowRun = async (params: {
       if (!node) continue;
 
       const startedAt = new Date();
-      let status = "success";
       let errorMessage: string | null = null;
       let output: unknown = null;
       const stepInput = currentInput;
+      const stepLog = await logService.startStep({
+        runId: run.id,
+        stepId: node.id,
+        stepType: node.type,
+        input: stepInput,
+      });
+      const startedAtMs = stepLog.startedAt.getTime();
 
       try {
         const executor = actionRegistry[node.type];
@@ -142,27 +143,56 @@ export const executeWorkflowRun = async (params: {
 
         output = result.output;
         currentInput = output;
-      } catch (err) {
-        status = "failed";
-        errorMessage =
-          err instanceof Error ? err.message : "Unknown workflow step error";
-      }
 
-      // 4. Логируем результат шага
-      await prisma.stepLog.create({
-        data: {
-          runId: run.id,
+        await logService.finishStep({
+          stepLogId: stepLog.id,
+          status: "success",
+          output,
+        });
+
+        const durationMs = Date.now() - startedAtMs;
+        stepTimings.push({
           stepId: node.id,
           stepType: node.type,
-          status,
-          input: stepInput as any,
-          output: output as any,
-          error: errorMessage ?? undefined,
-          createdAt: startedAt,
-        },
-      });
+          status: "success",
+          durationMs,
+        });
+        logger.info("Step completed", {
+          runId: run.id,
+          workflowId,
+          stepId: node.id,
+          stepType: node.type,
+          durationMs,
+        });
+      } catch (err) {
+        errorMessage =
+          err instanceof Error ? err.message : "Unknown workflow step error";
 
-      if (status === "failed") {
+        await logService.finishStep({
+          stepLogId: stepLog.id,
+          status: "failed",
+          output,
+          error: errorMessage,
+        });
+
+        const durationMs = Date.now() - startedAtMs;
+        stepTimings.push({
+          stepId: node.id,
+          stepType: node.type,
+          status: "failed",
+          durationMs,
+        });
+        logger.warn("Step failed", {
+          runId: run.id,
+          workflowId,
+          stepId: node.id,
+          stepType: node.type,
+          durationMs,
+          error: errorMessage,
+        });
+      }
+
+      if (errorMessage) {
         throw new Error(
           `Step ${node.id} of workflow ${workflowId} failed: ${errorMessage}`
         );
@@ -181,29 +211,17 @@ export const executeWorkflowRun = async (params: {
     }
 
     // 5. Все шаги успешно — обновляем статус запуска
-    await prisma.workflowRun.update({
-      where: { id: run.id },
-      data: {
-        status: WorkflowRunStatus.success,
-        finishedAt: new Date(),
-      },
-    });
+    await logService.finishRunSuccess(run.id);
 
     logger.info("Workflow run completed successfully", {
       runId: run.id,
       workflowId,
     });
 
-    return { runId: run.id };
+    return { runId: run.id, steps: stepTimings };
   } catch (err) {
     // 6. Ошибка — помечаем запуск как failed
-    await prisma.workflowRun.update({
-      where: { id: run.id },
-      data: {
-        status: WorkflowRunStatus.failed,
-        finishedAt: new Date(),
-      },
-    });
+    await logService.finishRunFailed(run.id);
 
     logger.error("Workflow run failed", {
       runId: run.id,

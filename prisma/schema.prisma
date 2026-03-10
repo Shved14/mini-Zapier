@@ -57,15 +57,17 @@ model WorkflowRun {
 }
 
 model StepLog {
-  id        String   @id @default(cuid())
-  runId     String
-  stepId    String
-  stepType  String
-  status    String
-  input     Json?
-  output    Json?
-  error     String?  @db.Text
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  runId      String
+  stepId     String
+  stepType   String
+  status     String
+  input      Json?
+  output     Json?
+  error      String?  @db.Text
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+  createdAt  DateTime @default(now())
 
   run WorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
