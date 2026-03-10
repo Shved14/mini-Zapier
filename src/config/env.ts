@@ -14,5 +14,7 @@ export const env = {
   REDIS_HOST: getEnv("REDIS_HOST", "localhost"),
   REDIS_PORT: parseInt(getEnv("REDIS_PORT", "6379"), 10),
   REDIS_PASSWORD: process.env.REDIS_PASSWORD || undefined,
+  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+  TELEGRAM_DEFAULT_CHAT_ID: process.env.TELEGRAM_DEFAULT_CHAT_ID,
 };
 
