@@ -7,6 +7,8 @@ import { executeWorkflowRun } from "../services/workflowEngine";
 type WorkflowJobData = {
   workflowId: string;
   payload: unknown;
+  runId?: string;
+  startFromNodeId?: string;
 };
 
 export const startWorkflowWorker = () => {
@@ -15,12 +17,15 @@ export const startWorkflowWorker = () => {
   const worker = new Worker<WorkflowJobData>(
     WORKFLOW_QUEUE_NAME,
     async (job: Job<WorkflowJobData>) => {
-      const { workflowId, payload } = job.data;
+      const { workflowId, payload, runId, startFromNodeId } = job.data;
 
-      logger.info(`Processing workflow ${workflowId}`, { jobId: job.id });
+      logger.info(`Processing workflow ${workflowId}`, {
+        jobId: job.id,
+        runId,
+        startFromNodeId,
+      });
 
-      // Делегируем всю логику движку выполнения workflow
-      await executeWorkflowRun({ workflowId, payload });
+      await executeWorkflowRun({ workflowId, payload, runId, startFromNodeId });
     },
     {
       connection,

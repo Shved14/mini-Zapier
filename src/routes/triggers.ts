@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { enqueueWorkflowExecution } from "../services/triggerService";
 import { reloadCronScheduler } from "../services/cronScheduler";
+import { runService } from "../services/runService";
 
 export const triggerRoutes = Router();
 
@@ -52,5 +53,21 @@ triggerRoutes.post("/trigger/email", async (req: Request, res: Response) => {
 triggerRoutes.post("/cron/reload", async (_req: Request, res: Response) => {
   await reloadCronScheduler();
   res.json({ message: "Cron scheduler reloaded" });
+});
+
+// Resume workflow run
+// POST /api/runs/:id/resume
+triggerRoutes.post("/runs/:id/resume", async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const { run, job } = await runService.resumeRun(id);
+
+  res.status(202).json({
+    message: "Run resume enqueued",
+    runId: run.id,
+    workflowId: run.workflowId,
+    jobId: job.id,
+    startFromNodeId: run.currentNodeId,
+  });
 });
 

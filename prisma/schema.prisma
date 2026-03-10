@@ -46,6 +46,7 @@ model WorkflowRun {
   id         String            @id @default(cuid())
   workflowId String
   status     WorkflowRunStatus
+  currentNodeId String?
   startedAt  DateTime          @default(now())
   finishedAt DateTime?
 

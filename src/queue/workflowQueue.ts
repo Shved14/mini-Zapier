@@ -8,6 +8,8 @@ export const WORKFLOW_QUEUE_NAME = "workflow-jobs";
 export type WorkflowJobPayload = {
   workflowId: string;
   payload: unknown;
+  runId?: string;
+  startFromNodeId?: string;
 };
 
 let workflowQueue: Queue<WorkflowJobPayload> | null = null;

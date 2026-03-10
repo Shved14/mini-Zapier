@@ -44,6 +44,13 @@ export const logService = {
     });
   },
 
+  async setCurrentNode(runId: string, nodeId: string) {
+    return prisma.workflowRun.update({
+      where: { id: runId },
+      data: { currentNodeId: nodeId },
+    });
+  },
+
   async startStep(params: {
     runId: string;
     stepId: string;

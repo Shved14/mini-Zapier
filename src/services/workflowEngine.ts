@@ -68,11 +68,25 @@ const buildGraphHelpers = (definition: WorkflowDefinition) => {
 export const executeWorkflowRun = async (params: {
   workflowId: string;
   payload: unknown;
+  runId?: string;
+  startFromNodeId?: string;
 }) => {
-  const { workflowId, payload } = params;
+  const { payload, runId, startFromNodeId } = params;
+  let workflowId = params.workflowId;
 
-  // 1. Создаём запись WorkflowRun со статусом running
-  const run = await logService.createRun(workflowId);
+  // 1. Создаём или возобновляем WorkflowRun
+  const run =
+    runId != null
+      ? await prisma.workflowRun.update({
+          where: { id: runId },
+          data: {
+            status: WorkflowRunStatus.running,
+            finishedAt: null,
+          },
+        })
+      : await logService.createRun(workflowId);
+
+  workflowId = run.workflowId;
   const stepTimings: Array<{
     stepId: string;
     stepType: string;
@@ -101,7 +115,9 @@ export const executeWorkflowRun = async (params: {
     return Math.min(max, exp + jitter);
   };
 
-  const classifyError = (err: unknown): "retryable" | "nonRetryable" | "critical" => {
+  const classifyError = (
+    err: unknown
+  ): "retryable" | "nonRetryable" | "critical" => {
     if (err instanceof WorkflowError) return err.kind;
     return "critical";
   };
@@ -120,8 +136,52 @@ export const executeWorkflowRun = async (params: {
     const definition = workflowVersion
       .workflowJson as unknown as WorkflowDefinition;
 
-    const { nodeMap, incomingCount, outgoing, startNodeIds } =
-      buildGraphHelpers(definition);
+    let nodeMap: Map<string, WorkflowNode>;
+    let incomingCount: Map<string, number>;
+    let outgoing: Map<string, string[]>;
+    let startNodeIds: string[];
+
+    if (startFromNodeId) {
+      // строим подграф, достижимый из startFromNodeId
+      const reachable = new Set<string>();
+      const adj = new Map<string, string[]>();
+      for (const edge of definition.edges) {
+        if (!adj.has(edge.from)) adj.set(edge.from, []);
+        adj.get(edge.from)!.push(edge.to);
+      }
+      const queueIds: string[] = [startFromNodeId];
+      while (queueIds.length > 0) {
+        const id = queueIds.shift()!;
+        if (reachable.has(id)) continue;
+        reachable.add(id);
+        const next = adj.get(id) ?? [];
+        for (const n of next) {
+          if (!reachable.has(n)) queueIds.push(n);
+        }
+      }
+
+      nodeMap = new Map();
+      incomingCount = new Map();
+      outgoing = new Map();
+      for (const node of definition.nodes) {
+        if (!reachable.has(node.id)) continue;
+        nodeMap.set(node.id, node);
+        incomingCount.set(node.id, 0);
+        outgoing.set(node.id, []);
+      }
+      for (const edge of definition.edges) {
+        if (!reachable.has(edge.from) || !reachable.has(edge.to)) continue;
+        incomingCount.set(edge.to, (incomingCount.get(edge.to) ?? 0) + 1);
+        outgoing.get(edge.from)!.push(edge.to);
+      }
+      startNodeIds = [startFromNodeId];
+    } else {
+      const helpers = buildGraphHelpers(definition);
+      nodeMap = helpers.nodeMap;
+      incomingCount = helpers.incomingCount;
+      outgoing = helpers.outgoing;
+      startNodeIds = helpers.startNodeIds;
+    }
 
     if (startNodeIds.length === 0) {
       logger.warn("Workflow has no start nodes", { workflowId });
@@ -147,6 +207,7 @@ export const executeWorkflowRun = async (params: {
       let errorMessage: string | null = null;
       let output: unknown = null;
       const stepInput = currentInput;
+      await logService.setCurrentNode(run.id, node.id);
       const stepLog = await logService.startStep({
         runId: run.id,
         stepId: node.id,
@@ -163,7 +224,9 @@ export const executeWorkflowRun = async (params: {
 
         for (let attempt = 1; attempt <= attempts; attempt++) {
           try {
-            const result = await executor(node.config ?? {}, stepInput);
+            const configWithPolicy = node.config ?? {};
+
+            const result = await executor(configWithPolicy, stepInput);
 
             if (!result.success) {
               throw new Error(
@@ -191,7 +254,7 @@ export const executeWorkflowRun = async (params: {
               error: msg,
             });
 
-            if (kind === "critical") {
+            if (kind === "critical" || (node.config as any)?.errorPolicy === "critical") {
               await logService.finishStep({
                 stepLogId: stepLog.id,
                 status: "failed",
