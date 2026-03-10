@@ -7,59 +7,71 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  workflows Workflow[]
+enum WorkflowRunStatus {
+  running
+  success
+  failed
 }
 
 model Workflow {
-  id          String        @id @default(cuid())
-  name        String
-  description String?
-  active      Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  isActive      Boolean  @default(true)
+  triggerType   String
+  triggerConfig Json
+  createdAt     DateTime @default(now())
 
-  userId String
-  user   User          @relation(fields: [userId], references: [id])
-
-  triggers Trigger[]
-  actions  Action[]
+  versions WorkflowVersion[]
   runs     WorkflowRun[]
+
+  @@index([isActive])
+  @@index([triggerType])
 }
 
-model Trigger {
-  id          String    @id @default(cuid())
-  type        String
-  config      Json
-  createdAt   DateTime  @default(now())
-  workflowId  String
-  workflow    Workflow  @relation(fields: [workflowId], references: [id])
-}
+model WorkflowVersion {
+  id           String   @id @default(cuid())
+  workflowId   String
+  version      Int
+  workflowJson Json
+  createdAt    DateTime @default(now())
 
-model Action {
-  id          String    @id @default(cuid())
-  type        String
-  config      Json
-  order       Int
-  createdAt   DateTime  @default(now())
-  workflowId  String
-  workflow    Workflow  @relation(fields: [workflowId], references: [id])
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, version])
+  @@index([workflowId])
 }
 
 model WorkflowRun {
-  id          String    @id @default(cuid())
-  status      String
-  payload     Json?
-  error       String?
-  createdAt   DateTime  @default(now())
-  finishedAt  DateTime?
-
+  id         String            @id @default(cuid())
   workflowId String
-  workflow   Workflow  @relation(fields: [workflowId], references: [id])
+  status     WorkflowRunStatus
+  startedAt  DateTime          @default(now())
+  finishedAt DateTime?
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  stepLogs StepLog[]
+
+  @@index([workflowId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model StepLog {
+  id        String   @id @default(cuid())
+  runId     String
+  stepId    String
+  stepType  String
+  status    String
+  input     Json?
+  output    Json?
+  error     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  run WorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([stepId])
+  @@index([status])
+  @@index([createdAt])
 }
 
