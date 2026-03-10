@@ -8,6 +8,7 @@ import { initQueues } from "./queue";
 import { errorHandler } from "./middleware/errorHandler";
 import { routes } from "./routes";
 import { logger } from "./utils/logger";
+import { initCronScheduler } from "./services/cronScheduler";
 
 const app: Application = express();
 
@@ -34,6 +35,7 @@ app.use(errorHandler);
 const start = async () => {
   try {
     await initQueues();
+    await initCronScheduler();
 
     app.listen(env.PORT, () => {
       logger.info(`Server listening on port ${env.PORT}`);
