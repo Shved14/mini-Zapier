@@ -1,5 +1,6 @@
 import { prisma } from "../config/prisma";
 import { ActionExecutor, ActionResult } from "./types";
+import { criticalError } from "../utils/errors";
 
 export const dbExecutor: ActionExecutor = {
   async execute(config: unknown, input: unknown): Promise<ActionResult> {
@@ -20,7 +21,14 @@ export const dbExecutor: ActionExecutor = {
 
       // В тестовом проекте можно использовать небезопасный метод,
       // главное — не выполнять пользовательский ввод без валидации.
-      const result = await prisma.$queryRawUnsafe(cfg.query, ...params);
+      let result;
+      try {
+        result = await prisma.$queryRawUnsafe(cfg.query, ...params);
+      } catch (err) {
+        throw criticalError("DB action failed", {
+          query: cfg.query,
+        });
+      }
 
       return {
         success: true,

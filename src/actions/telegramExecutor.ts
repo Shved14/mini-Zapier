@@ -2,6 +2,7 @@ import axios from "axios";
 import { ActionExecutor, ActionResult } from "./types";
 import { env } from "../config/env";
 import { interpolateTemplate } from "../utils/data";
+import { retryableError, nonRetryableError } from "../utils/errors";
 
 export const telegramExecutor: ActionExecutor = {
   async execute(config: unknown, input: unknown): Promise<ActionResult> {
@@ -39,14 +40,23 @@ export const telegramExecutor: ActionExecutor = {
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
-    const response = await axios.post(url, {
-      chat_id: chatId,
-      text,
-      parse_mode: cfg.parseMode,
-    });
+    let response;
+    try {
+      response = await axios.post(url, {
+        chat_id: chatId,
+        text,
+        parse_mode: cfg.parseMode,
+      });
+    } catch (err) {
+      throw retryableError("Telegram action network error");
+    }
+
+    if (response.status >= 500) {
+      throw retryableError(`Telegram action failed with status ${response.status}`);
+    }
 
     if (response.status >= 400 || !response.data.ok) {
-      throw new Error(
+      throw nonRetryableError(
         `Telegram action failed: ${response.status} ${JSON.stringify(
           response.data
         )}`

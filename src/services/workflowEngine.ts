@@ -3,6 +3,8 @@ import { WorkflowRunStatus } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { actionRegistry } from "../actions/actionRegistry";
 import { logService } from "./logService";
+import { notificationService } from "./notificationService";
+import { WorkflowError } from "../utils/errors";
 
 export type WorkflowNode = {
   id: string;
@@ -78,6 +80,32 @@ export const executeWorkflowRun = async (params: {
     durationMs: number;
   }> = [];
 
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  const getRetryConfig = (node: WorkflowNode) => {
+    const cfg = (node.config ?? {}) as any;
+    const retry = cfg.retry ?? {};
+    const attempts = typeof retry.attempts === "number" ? retry.attempts : 3;
+    const baseDelayMs =
+      typeof retry.backoffMs === "number" ? retry.backoffMs : 1000;
+    const maxDelayMs =
+      typeof retry.maxBackoffMs === "number" ? retry.maxBackoffMs : 15000;
+    return { attempts, baseDelayMs, maxDelayMs };
+  };
+
+  const computeBackoffMs = (attemptIndex: number, base: number, max: number) => {
+    // exponential + jitter (attemptIndex starts from 1 for first retry)
+    const exp = Math.min(max, base * Math.pow(2, Math.max(0, attemptIndex - 1)));
+    const jitter = Math.floor(Math.random() * Math.min(250, exp));
+    return Math.min(max, exp + jitter);
+  };
+
+  const classifyError = (err: unknown): "retryable" | "nonRetryable" | "critical" => {
+    if (err instanceof WorkflowError) return err.kind;
+    return "critical";
+  };
+
   try {
     // 2. Загружаем последнюю версию workflow
     const workflowVersion = await prisma.workflowVersion.findFirst({
@@ -127,23 +155,81 @@ export const executeWorkflowRun = async (params: {
       });
       const startedAtMs = stepLog.startedAt.getTime();
 
-      try {
-        const executor = actionRegistry[node.type];
-        if (!executor) {
-          throw new Error(`Unknown action type "${node.type}"`);
+      const executor = actionRegistry[node.type];
+      if (!executor) {
+        errorMessage = `Unknown action type "${node.type}"`;
+      } else {
+        const { attempts, baseDelayMs, maxDelayMs } = getRetryConfig(node);
+
+        for (let attempt = 1; attempt <= attempts; attempt++) {
+          try {
+            const result = await executor(node.config ?? {}, stepInput);
+
+            if (!result.success) {
+              throw new Error(
+                `Action executor for type "${node.type}" returned success=false`
+              );
+            }
+
+            output = result.output;
+            currentInput = output;
+            errorMessage = null;
+            break;
+          } catch (err) {
+            const kind = classifyError(err);
+            const msg = err instanceof Error ? err.message : "Unknown error";
+            errorMessage = msg;
+
+            logger.warn("Step attempt failed", {
+              runId: run.id,
+              workflowId,
+              stepId: node.id,
+              stepType: node.type,
+              attempt,
+              attempts,
+              kind,
+              error: msg,
+            });
+
+            if (kind === "critical") {
+              await logService.finishStep({
+                stepLogId: stepLog.id,
+                status: "failed",
+                output,
+                error: msg,
+              });
+
+              const durationMs = Date.now() - startedAtMs;
+              stepTimings.push({
+                stepId: node.id,
+                stepType: node.type,
+                status: "failed",
+                durationMs,
+              });
+
+              await logService.pauseRun(run.id);
+              await notificationService.telegram(
+                `CRITICAL: workflow paused\nworkflowId=${workflowId}\nrunId=${run.id}\nstep=${node.type}(${node.id})\nerror=${msg}`
+              );
+
+              return { runId: run.id, steps: stepTimings, paused: true };
+            }
+
+            if (kind === "nonRetryable" || attempt === attempts) {
+              break;
+            }
+
+            const backoffMs = computeBackoffMs(
+              attempt,
+              baseDelayMs,
+              maxDelayMs
+            );
+            await sleep(backoffMs);
+          }
         }
+      }
 
-        const result = await executor(node.config ?? {}, stepInput);
-
-        if (!result.success) {
-          throw new Error(
-            `Action executor for type "${node.type}" returned success=false`
-          );
-        }
-
-        output = result.output;
-        currentInput = output;
-
+      if (!errorMessage) {
         await logService.finishStep({
           stepLogId: stepLog.id,
           status: "success",
@@ -164,10 +250,7 @@ export const executeWorkflowRun = async (params: {
           stepType: node.type,
           durationMs,
         });
-      } catch (err) {
-        errorMessage =
-          err instanceof Error ? err.message : "Unknown workflow step error";
-
+      } else {
         await logService.finishStep({
           stepLogId: stepLog.id,
           status: "failed",
@@ -193,6 +276,9 @@ export const executeWorkflowRun = async (params: {
       }
 
       if (errorMessage) {
+        await notificationService.telegram(
+          `Workflow failed\nworkflowId=${workflowId}\nrunId=${run.id}\nstep=${node.type}(${node.id})\nerror=${errorMessage}`
+        );
         throw new Error(
           `Step ${node.id} of workflow ${workflowId} failed: ${errorMessage}`
         );

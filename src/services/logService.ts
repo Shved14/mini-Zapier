@@ -34,6 +34,16 @@ export const logService = {
     });
   },
 
+  async pauseRun(runId: string) {
+    return prisma.workflowRun.update({
+      where: { id: runId },
+      data: {
+        status: WorkflowRunStatus.paused,
+        finishedAt: new Date(),
+      },
+    });
+  },
+
   async startStep(params: {
     runId: string;
     stepId: string;
