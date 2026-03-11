@@ -2,6 +2,37 @@ import { prisma } from "../config/prisma";
 import { enqueueWorkflowJob } from "../queue/workflowQueue";
 
 export const runService = {
+  async list() {
+    return prisma.workflowRun.findMany({
+      orderBy: { startedAt: "desc" },
+      include: {
+        workflow: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+  },
+
+  async getById(id: string) {
+    const run = await prisma.workflowRun.findUnique({
+      where: { id },
+      include: {
+        workflow: {
+          select: { id: true, name: true },
+        },
+        stepLogs: true,
+      },
+    });
+
+    if (!run) {
+      const err = new Error(`Run not found: ${id}`);
+      (err as any).statusCode = 404;
+      throw err;
+    }
+
+    return run;
+  },
+
   async resumeRun(runId: string) {
     const run = await prisma.workflowRun.findUnique({
       where: { id: runId },

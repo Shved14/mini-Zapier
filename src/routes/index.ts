@@ -1,29 +1,23 @@
-import { Router, Request, Response } from "express";
-import { enqueueWorkflowExecution } from "../services/triggerService";
+import { Router } from "express";
 import { triggerRoutes } from "./triggers";
+import { workflowController } from "../controllers/workflowController";
+import { runController } from "../controllers/runController";
 
 export const routes = Router();
 
 routes.use(triggerRoutes);
 
-routes.get("/workflows", async (req: Request, res: Response) => {
-  // Placeholder route for listing workflows
-  res.json({ workflows: [] });
-});
+// Workflows CRUD
+routes.post("/workflows", workflowController.create);
+routes.get("/workflows", workflowController.list);
+routes.get("/workflows/:id", workflowController.getById);
+routes.put("/workflows/:id", workflowController.update);
+routes.delete("/workflows/:id", workflowController.remove);
 
-routes.post("/workflows/:id/run", async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const payload = req.body ?? {};
+// Run workflow
+routes.post("/workflows/:id/run", workflowController.run);
 
-  const job = await enqueueWorkflowExecution({
-    workflowId: id,
-    payload,
-    source: "webhook",
-  });
-
-  res.status(202).json({
-    message: "Workflow run enqueued",
-    jobId: job.id,
-  });
-});
+// Runs
+routes.get("/runs", runController.list);
+routes.get("/runs/:id", runController.getById);
 
