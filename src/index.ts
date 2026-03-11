@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express, { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
 
 import { env } from "./config/env";
 import { prisma } from "./config/prisma";
@@ -9,6 +10,7 @@ import { errorHandler } from "./middleware/errorHandler";
 import { routes } from "./routes";
 import { logger } from "./utils/logger";
 import { initCronScheduler } from "./services/cronScheduler";
+import { swaggerSpec } from "./config/swagger";
 
 const app: Application = express();
 
@@ -23,6 +25,9 @@ app.get("/health", async (req: Request, res: Response) => {
     db: dbCheck ? "up" : "down",
   });
 });
+
+// Swagger docs
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api", routes);
 
