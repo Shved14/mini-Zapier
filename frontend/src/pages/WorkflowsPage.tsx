@@ -1,13 +1,29 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
-import { workflowsApi } from "../api/workflows";
+import { workflowsApi, Workflow } from "../api/workflows";
+import { WorkflowEditor } from "../components/WorkflowEditor";
 
 export const WorkflowsPage: React.FC = () => {
   const { workflows, loading, error, fetchWorkflows } = useAppStore();
+  const [editing, setEditing] = useState<Workflow | null>(null);
+  const [editingJson, setEditingJson] = useState<any | undefined>(undefined);
 
   useEffect(() => {
     fetchWorkflows();
   }, [fetchWorkflows]);
+
+  const openEditor = async (wf: Workflow) => {
+    try {
+      const full = await workflowsApi.get(wf.id);
+      // full may contain latest workflowJson via backend; for now, assume triggerConfig.workflowJson not returned
+      // so we just leave initialWorkflowJson undefined or extend API later
+      setEditing(wf);
+      setEditingJson((full as any).workflowJson ?? undefined);
+    } catch {
+      setEditing(wf);
+      setEditingJson(undefined);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -60,6 +76,12 @@ export const WorkflowsPage: React.FC = () => {
               >
                 Run
               </button>
+              <button
+                className="px-2 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800"
+                onClick={() => openEditor(wf)}
+              >
+                Edit
+              </button>
             </div>
           </div>
         ))}
@@ -70,6 +92,17 @@ export const WorkflowsPage: React.FC = () => {
           </div>
         )}
       </div>
+      {editing && (
+        <WorkflowEditor
+          workflow={editing}
+          initialWorkflowJson={editingJson}
+          onClose={() => {
+            setEditing(null);
+            setEditingJson(undefined);
+            fetchWorkflows();
+          }}
+        />
+      )}
     </div>
   );
 };
