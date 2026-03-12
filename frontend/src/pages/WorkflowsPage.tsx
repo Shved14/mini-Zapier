@@ -7,6 +7,8 @@ export const WorkflowsPage: React.FC = () => {
   const { workflows, loading, error, fetchWorkflows } = useAppStore();
   const [editing, setEditing] = useState<Workflow | null>(null);
   const [editingJson, setEditingJson] = useState<any | undefined>(undefined);
+  const [deleting, setDeleting] = useState<Workflow | null>(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
 
   useEffect(() => {
     fetchWorkflows();
@@ -82,6 +84,12 @@ export const WorkflowsPage: React.FC = () => {
               >
                 Edit
               </button>
+              <button
+                className="px-2 py-1 text-xs rounded-md border border-red-500/60 text-red-200 hover:bg-red-500/10"
+                onClick={() => setDeleting(wf)}
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}
@@ -93,6 +101,7 @@ export const WorkflowsPage: React.FC = () => {
         )}
       </div>
       {editing && (
+      {editing && (
         <WorkflowEditor
           workflow={editing}
           initialWorkflowJson={editingJson}
@@ -102,6 +111,48 @@ export const WorkflowsPage: React.FC = () => {
             fetchWorkflows();
           }}
         />
+      )}
+      {deleting && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-950 p-5 shadow-xl">
+            <h4 className="text-sm font-semibold mb-2 text-slate-100">
+              Delete this workflow?
+            </h4>
+            <p className="text-xs text-slate-400 mb-4">
+              You are about to delete{" "}
+              <span className="font-medium text-slate-100">
+                {deleting.name}
+              </span>
+              . This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 text-xs">
+              <button
+                className="px-3 py-1.5 rounded-md border border-slate-700 hover:bg-slate-800"
+                onClick={() => setDeleting(null)}
+                disabled={deletingLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 disabled:opacity-60"
+                onClick={async () => {
+                  if (!deleting) return;
+                  setDeletingLoading(true);
+                  try {
+                    await workflowsApi.remove(deleting.id);
+                    await fetchWorkflows();
+                    setDeleting(null);
+                  } finally {
+                    setDeletingLoading(false);
+                  }
+                }}
+                disabled={deletingLoading}
+              >
+                {deletingLoading ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

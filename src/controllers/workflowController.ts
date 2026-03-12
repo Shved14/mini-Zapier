@@ -5,13 +5,17 @@ import { enqueueWorkflowExecution } from "../services/triggerService";
 export const workflowController = {
   async create(req: Request, res: Response) {
     const body = req.body ?? {};
-    const workflow = await workflowService.create({
-      name: body.name,
-      isActive: body.isActive,
-      triggerType: body.triggerType,
-      triggerConfig: body.triggerConfig,
-      workflowJson: body.workflowJson,
-    });
+    const user = (req as any).user as { userId?: string } | undefined;
+    const workflow = await workflowService.create(
+      {
+        name: body.name,
+        isActive: body.isActive,
+        triggerType: body.triggerType,
+        triggerConfig: body.triggerConfig,
+        workflowJson: body.workflowJson,
+      },
+      user?.userId
+    );
     res.status(201).json(workflow);
   },
 
@@ -31,7 +35,8 @@ export const workflowController = {
   },
 
   async remove(req: Request, res: Response) {
-    await workflowService.remove(req.params.id);
+    const user = (req as any).user as { userId?: string } | undefined;
+    await workflowService.remove(req.params.id, user?.userId);
     res.status(204).send();
   },
 

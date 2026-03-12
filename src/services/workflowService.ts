@@ -11,7 +11,7 @@ type CreateWorkflowInput = {
 type UpdateWorkflowInput = Partial<CreateWorkflowInput>;
 
 export const workflowService = {
-  async create(data: CreateWorkflowInput) {
+  async create(data: CreateWorkflowInput, ownerUserId?: string) {
     const { workflowJson, ...rest } = data;
 
     const workflow = await prisma.workflow.create({
@@ -20,6 +20,7 @@ export const workflowService = {
         isActive: rest.isActive ?? true,
         triggerType: rest.triggerType,
         triggerConfig: (rest.triggerConfig ?? {}) as any,
+        ...(ownerUserId ? { userId: ownerUserId } : {}),
       },
     });
 
@@ -93,7 +94,24 @@ export const workflowService = {
     return workflow;
   },
 
-  async remove(id: string) {
+  async remove(id: string, currentUserId?: string) {
+    const workflow = await prisma.workflow.findUnique({
+      where: { id },
+    });
+
+    if (!workflow) {
+      const err = new Error(`Workflow not found: ${id}`);
+      (err as any).statusCode = 404;
+      throw err;
+    }
+
+    // Если у workflow есть владелец, только он может удалить
+    if (workflow.userId && workflow.userId !== currentUserId) {
+      const err = new Error("You are not allowed to delete this workflow");
+      (err as any).statusCode = 403;
+      throw err;
+    }
+
     await prisma.workflow.delete({
       where: { id },
     });
