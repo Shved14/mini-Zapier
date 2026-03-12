@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { signJwt } from "../utils/jwt";
 import { env } from "../config/env";
 import nodemailer from "nodemailer";
+import { subscriptionService } from "./subscriptionService";
 
 export const authService = {
   async register(email: string, password: string, name?: string) {
@@ -21,6 +22,7 @@ export const authService = {
         provider: "local",
       },
     });
+    await subscriptionService.createDefaultForUser(user.id);
     const token = signJwt({ userId: user.id, email: user.email });
     return { user, token };
   },

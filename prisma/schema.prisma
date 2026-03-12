@@ -21,6 +21,21 @@ model User {
   password  String?
   provider  String?
   createdAt DateTime @default(now())
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id          String   @id @default(uuid())
+  userId      String
+  plan        String
+  status      String
+  trialEndsAt DateTime?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Workflow {
