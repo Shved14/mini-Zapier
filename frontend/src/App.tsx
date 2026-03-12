@@ -5,9 +5,12 @@ import { RunsPage } from "./pages/RunsPage";
 import { RunDetailsPage } from "./pages/RunDetailsPage";
 import { StatsPage } from "./pages/StatsPage";
 import { LandingPage } from "./pages/LandingPage";
+import { ProfilePage } from "./pages/ProfilePage";
+
+type Page = "workflows" | "runs" | "stats" | "profile";
 
 const App: React.FC = () => {
-  const [page, setPage] = useState<"workflows" | "runs" | "stats">("workflows");
+  const [page, setPage] = useState<Page>("workflows");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [showLanding, setShowLanding] = useState(true);
 
@@ -34,6 +37,9 @@ const App: React.FC = () => {
     }
     if (page === "stats") {
       return <StatsPage />;
+    }
+    if (page === "profile") {
+      return <ProfilePage />;
     }
     return null;
   };

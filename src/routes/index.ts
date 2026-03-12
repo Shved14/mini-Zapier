@@ -7,6 +7,8 @@ import {
   checkCreateWorkflowLimit,
   checkRunWorkflowLimit,
 } from "../middleware/subscriptionMiddleware";
+import { userController } from "../controllers/userController";
+import { authMiddleware } from "../middleware/authMiddleware";
 
 export const routes = Router();
 
@@ -30,4 +32,8 @@ routes.post(
 // Runs
 routes.get("/runs", runController.list);
 routes.get("/runs/:id", runController.getById);
+
+// User profile
+routes.get("/users/me", authMiddleware, userController.me);
+routes.patch("/users/me", authMiddleware, userController.updateMe);
 

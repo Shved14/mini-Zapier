@@ -11,6 +11,7 @@ const navItems = [
   { id: "workflows", label: "Workflows" },
   { id: "runs", label: "Runs" },
   { id: "stats", label: "Statistics" },
+   { id: "profile", label: "Profile" },
 ];
 
 export const Layout: React.FC<LayoutProps> = ({
