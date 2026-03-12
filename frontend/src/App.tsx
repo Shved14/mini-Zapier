@@ -4,10 +4,21 @@ import { WorkflowsPage } from "./pages/WorkflowsPage";
 import { RunsPage } from "./pages/RunsPage";
 import { RunDetailsPage } from "./pages/RunDetailsPage";
 import { StatsPage } from "./pages/StatsPage";
+import { LandingPage } from "./pages/LandingPage";
 
 const App: React.FC = () => {
   const [page, setPage] = useState<"workflows" | "runs" | "stats">("workflows");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [showLanding, setShowLanding] = useState(true);
+
+  if (showLanding) {
+    return (
+      <LandingPage
+        onGetStarted={() => setShowLanding(false)}
+        onViewDocs={() => window.open("http://localhost:4000/docs", "_blank")}
+      />
+    );
+  }
 
   const renderContent = () => {
     if (page === "workflows") {

@@ -2,9 +2,11 @@ import { Router } from "express";
 import { triggerRoutes } from "./triggers";
 import { workflowController } from "../controllers/workflowController";
 import { runController } from "../controllers/runController";
+import { authRoutes } from "./auth";
 
 export const routes = Router();
 
+routes.use("/auth", authRoutes);
 routes.use(triggerRoutes);
 
 // Workflows CRUD

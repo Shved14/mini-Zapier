@@ -35,7 +35,9 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
