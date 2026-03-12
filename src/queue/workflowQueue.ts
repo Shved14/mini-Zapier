@@ -1,4 +1,4 @@
-import { Queue, QueueScheduler, JobsOptions } from "bullmq";
+import { Queue, JobsOptions } from "bullmq";
 import { getRedisClient } from "../config/redis";
 import { env } from "../config/env";
 import { logger } from "../utils/logger";
@@ -13,7 +13,6 @@ export type WorkflowJobPayload = {
 };
 
 let workflowQueue: Queue<WorkflowJobPayload> | null = null;
-let workflowQueueScheduler: QueueScheduler | null = null;
 
 export const getWorkflowQueue = (): Queue<WorkflowJobPayload> => {
   if (!workflowQueue) {
@@ -34,20 +33,6 @@ export const getWorkflowQueue = (): Queue<WorkflowJobPayload> => {
   }
 
   return workflowQueue;
-};
-
-export const initWorkflowQueue = async (): Promise<void> => {
-  if (!workflowQueueScheduler) {
-    const connection = getRedisClient();
-
-    workflowQueueScheduler = new QueueScheduler(WORKFLOW_QUEUE_NAME, {
-      connection,
-    });
-
-    logger.info(
-      `Workflow queue scheduler initialized (Redis: ${env.REDIS_HOST}:${env.REDIS_PORT})`
-    );
-  }
 };
 
 export const enqueueWorkflowJob = async (
