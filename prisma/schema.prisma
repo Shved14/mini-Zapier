@@ -23,6 +23,7 @@ model User {
   createdAt DateTime @default(now())
 
   subscriptions Subscription[]
+  workflows     Workflow[]
 }
 
 model Subscription {

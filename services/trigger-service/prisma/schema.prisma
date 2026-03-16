@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Trigger {
+  id          String   @id @default(cuid())
+  workflowId  String
+  type        String   // "webhook" | "cron" | "email"
+  name        String
+  config      Json     // Configuration for the trigger
+  isActive    Boolean  @default(true)
+  lastTriggered DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  webhooks    Webhook[]
+  schedules   CronSchedule[]
+
+  @@map("triggers")
+}
+
+model Webhook {
+  id          String   @id @default(cuid())
+  triggerId   String
+  url         String
+  method      String   @default("POST")
+  headers     Json?
+  isActive    Boolean  @default(true)
+  secret      String?  // For webhook verification
+  lastCalled  DateTime?
+  callCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trigger     Trigger @relation(fields: [triggerId], references: [id], onDelete: Cascade)
+
+  @@map("webhooks")
+}
+
+model CronSchedule {
+  id          String   @id @default(cuid())
+  triggerId   String
+  cron        String   // Cron expression
+  timezone    String   @default("UTC")
+  isActive    Boolean  @default(true)
+  lastRun     DateTime?
+  nextRun     DateTime?
+  runCount    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trigger     Trigger @relation(fields: [triggerId], references: [id], onDelete: Cascade)
+
+  @@map("cron_schedules")
+}
+
+model EmailTrigger {
+  id          String   @id @default(cuid())
+  triggerId   String
+  email       String
+  subject     String?
+  fromPattern String?  // Pattern to match in email
+  isActive    Boolean  @default(true)
+  lastProcessed DateTime?
+  processCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("email_triggers")
+}

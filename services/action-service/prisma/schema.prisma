@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Action {
+  id          String   @id @default(cuid())
+  workflowId  String
+  type        String   // "http" | "email" | "telegram" | "database" | "transform"
+  name        String
+  config      Json     // Configuration for the action
+  position    Int      // Order in workflow
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  executions  ActionExecution[]
+
+  @@map("actions")
+}
+
+model ActionExecution {
+  id          String   @id @default(cuid())
+  actionId    String
+  executionId String
+  status      String   // "pending" | "running" | "completed" | "failed"
+  input       Json?
+  output      Json?
+  error       String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  retryCount  Int      @default(0)
+
+  action      Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@map("action_executions")
+}
+
+model Integration {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // "http" | "email" | "telegram" | "database"
+  config      Json     // Integration configuration
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("integrations")
+}
+
+model ActionLog {
+  id          String   @id @default(cuid())
+  actionId    String
+  level       String   // "info" | "warn" | "error" | "debug"
+  message     String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@map("action_logs")
+}

@@ -64,17 +64,16 @@ export const WorkflowsPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <span
-                className={`px-2 py-0.5 text-xs rounded-full ${
-                  wf.isActive
+                className={`px-2 py-0.5 text-xs rounded-full ${wf.isActive
                     ? "bg-emerald-500/10 text-emerald-300"
                     : "bg-slate-700 text-slate-300"
-                }`}
+                  }`}
               >
                 {wf.isActive ? "Active" : "Inactive"}
               </span>
               <button
                 className="px-2 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800"
-                onClick={() => workflowsApi.run(wf.id).then(() => {})}
+                onClick={() => workflowsApi.run(wf.id).then(() => { })}
               >
                 Run
               </button>
@@ -100,7 +99,6 @@ export const WorkflowsPage: React.FC = () => {
           </div>
         )}
       </div>
-      {editing && (
       {editing && (
         <WorkflowEditor
           workflow={editing}
