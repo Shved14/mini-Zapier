@@ -12,41 +12,46 @@ model Workflow {
   name        String
   description String?
   userId      String
-  isActive    Boolean  @default(true)
+  status      WorkflowStatus @default(DRAFT)
+  trigger     Json     // Trigger configuration
+  nodes       Json     // Workflow nodes array
+  edges       Json     // Workflow edges array
+  settings    Json?    // Additional workflow settings
+  isActive    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  steps       WorkflowStep[]
   executions  WorkflowExecution[]
 
   @@map("workflows")
 }
 
-model WorkflowStep {
-  id          String   @id @default(cuid())
-  workflowId  String
-  type        String   // "trigger" | "action"
-  name        String
-  config      Json     // Configuration for the step
-  position    Int      // Order in workflow
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-
-  @@map("workflow_steps")
-}
-
 model WorkflowExecution {
   id          String   @id @default(cuid())
   workflowId  String
-  status      String   // "running" | "completed" | "failed"
+  status      ExecutionStatus @default(PENDING)
   startedAt   DateTime @default(now())
   completedAt DateTime?
   error       String?
   logs        Json?
+  metadata    Json?    // Additional execution metadata
 
   workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@map("workflow_executions")
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
