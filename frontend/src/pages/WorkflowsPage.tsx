@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "../store/useAppStore";
 import { workflowsApi, Workflow } from "../api/workflows";
 import { WorkflowEditor } from "../components/WorkflowEditor";
+import { Plus, Play, Edit, Trash2, Zap, Clock, Activity, Settings } from "lucide-react";
 
 export const WorkflowsPage: React.FC = () => {
   const { workflows, loading, error, fetchWorkflows } = useAppStore();
@@ -17,8 +19,6 @@ export const WorkflowsPage: React.FC = () => {
   const openEditor = async (wf: Workflow) => {
     try {
       const full = await workflowsApi.get(wf.id);
-      // full may contain latest workflowJson via backend; for now, assume triggerConfig.workflowJson not returned
-      // so we just leave initialWorkflowJson undefined or extend API later
       setEditing(wf);
       setEditingJson((full as any).workflowJson ?? undefined);
     } catch {
@@ -27,131 +27,278 @@ export const WorkflowsPage: React.FC = () => {
     }
   };
 
+  const createNewWorkflow = async () => {
+    try {
+      const newWorkflow = await workflowsApi.create({
+        name: "New workflow",
+        triggerType: "webhook",
+      });
+      await fetchWorkflows();
+      openEditor(newWorkflow);
+    } catch (error) {
+      console.error('Failed to create workflow:', error);
+    }
+  };
+
+  const runWorkflow = async (workflowId: string) => {
+    try {
+      await workflowsApi.run(workflowId);
+    } catch (error) {
+      console.error('Failed to run workflow:', error);
+    }
+  };
+
+  const deleteWorkflow = async (workflow: Workflow) => {
+    if (!workflow) return;
+    setDeletingLoading(true);
+    try {
+      await workflowsApi.remove(workflow.id);
+      await fetchWorkflows();
+      setDeleting(null);
+    } finally {
+      setDeletingLoading(false);
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h3 className="text-base font-semibold">Workflows</h3>
-        <button
-          className="px-3 py-1.5 text-sm rounded-md bg-primary-600 hover:bg-primary-700"
-          onClick={() =>
-            workflowsApi
-              .create({
-                name: "New workflow",
-                triggerType: "webhook",
-              })
-              .then(fetchWorkflows)
-          }
-        >
-          + New workflow
-        </button>
-      </div>
-
-      {loading && <div className="text-sm text-slate-400">Loading...</div>}
-      {error && <div className="text-sm text-red-400">{error}</div>}
-
-      <div className="grid gap-3">
-        {workflows.map((wf) => (
-          <div
-            key={wf.id}
-            className="border border-slate-800 rounded-lg p-4 bg-slate-900/60 flex justify-between items-center"
-          >
-            <div>
-              <div className="font-medium">{wf.name}</div>
-              <div className="text-xs text-slate-400">
-                Trigger: {wf.triggerType} • Created:{" "}
-                {new Date(wf.createdAt).toLocaleString()}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-2 py-0.5 text-xs rounded-full ${wf.isActive
-                    ? "bg-emerald-500/10 text-emerald-300"
-                    : "bg-slate-700 text-slate-300"
-                  }`}
-              >
-                {wf.isActive ? "Active" : "Inactive"}
-              </span>
-              <button
-                className="px-2 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800"
-                onClick={() => workflowsApi.run(wf.id).then(() => { })}
-              >
-                Run
-              </button>
-              <button
-                className="px-2 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800"
-                onClick={() => openEditor(wf)}
-              >
-                Edit
-              </button>
-              <button
-                className="px-2 py-1 text-xs rounded-md border border-red-500/60 text-red-200 hover:bg-red-500/10"
-                onClick={() => setDeleting(wf)}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {!loading && workflows.length === 0 && (
-          <div className="text-sm text-slate-500">
-            No workflows yet. Create your first one.
-          </div>
-        )}
-      </div>
-      {editing && (
-        <WorkflowEditor
-          workflow={editing}
-          initialWorkflowJson={editingJson}
-          onClose={() => {
-            setEditing(null);
-            setEditingJson(undefined);
-            fetchWorkflows();
-          }}
-        />
-      )}
-      {deleting && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60">
-          <div className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-950 p-5 shadow-xl">
-            <h4 className="text-sm font-semibold mb-2 text-slate-100">
-              Delete this workflow?
-            </h4>
-            <p className="text-xs text-slate-400 mb-4">
-              You are about to delete{" "}
-              <span className="font-medium text-slate-100">
-                {deleting.name}
-              </span>
-              . This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2 text-xs">
-              <button
-                className="px-3 py-1.5 rounded-md border border-slate-700 hover:bg-slate-800"
-                onClick={() => setDeleting(null)}
-                disabled={deletingLoading}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 disabled:opacity-60"
-                onClick={async () => {
-                  if (!deleting) return;
-                  setDeletingLoading(true);
-                  try {
-                    await workflowsApi.remove(deleting.id);
-                    await fetchWorkflows();
-                    setDeleting(null);
-                  } finally {
-                    setDeletingLoading(false);
-                  }
-                }}
-                disabled={deletingLoading}
-              >
-                {deletingLoading ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-white">Workflows</h1>
+          <p className="text-gray-400 mt-1">Manage and automate your workflows</p>
         </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={createNewWorkflow}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300 neon-border"
+        >
+          <Plus className="h-5 w-5" />
+          New workflow
+        </motion.button>
+      </div>
+
+      {/* Loading State */}
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-center py-12"
+        >
+          <div className="text-gray-400">Loading workflows...</div>
+        </motion.div>
       )}
+
+      {/* Error State */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-4 rounded-xl bg-red-500/10 border border-red-500/30"
+        >
+          <p className="text-red-400">{error}</p>
+        </motion.div>
+      )}
+
+      {/* Workflows Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <AnimatePresence>
+          {workflows.map((workflow, index) => (
+            <motion.div
+              key={workflow.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className="group"
+            >
+              <div className="glass rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-xl hover-glow">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                      {workflow.name}
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <Zap className="h-4 w-4" />
+                      <span>{workflow.triggerType}</span>
+                    </div>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${workflow.isActive
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                    }`}>
+                    {workflow.isActive ? 'Active' : 'Inactive'}
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
+                      <Clock className="h-3 w-3" />
+                    </div>
+                    <div className="text-xs text-gray-400">Created</div>
+                    <div className="text-sm text-white font-medium">
+                      {new Date(workflow.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
+                      <Activity className="h-3 w-3" />
+                    </div>
+                    <div className="text-xs text-gray-400">Runs</div>
+                    <div className="text-sm text-white font-medium">
+                      {/* This would come from API */}
+                      0
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
+                      <Settings className="h-3 w-3" />
+                    </div>
+                    <div className="text-xs text-gray-400">Status</div>
+                    <div className="text-sm text-white font-medium">
+                      {workflow.isActive ? 'Running' : 'Paused'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-4 border-t border-white/10">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => runWorkflow(workflow.id)}
+                    disabled={!workflow.isActive}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                  >
+                    <Play className="h-4 w-4" />
+                    Run
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => openEditor(workflow)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg glass border border-white/10 hover:bg-white/10 text-white transition-all duration-300"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setDeleting(workflow)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* Empty State */}
+      {!loading && workflows.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-12"
+        >
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-500/20 border border-purple-500/30 mb-4">
+            <Zap className="h-8 w-8 text-purple-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">No workflows yet</h3>
+          <p className="text-gray-400 mb-6">Create your first workflow to get started</p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={createNewWorkflow}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300 neon-border"
+          >
+            <Plus className="h-5 w-5" />
+            Create workflow
+          </motion.button>
+        </motion.div>
+      )}
+
+      {/* Workflow Editor Modal */}
+      <AnimatePresence>
+        {editing && (
+          <WorkflowEditor
+            workflow={editing}
+            initialWorkflowJson={editingJson}
+            onClose={() => {
+              setEditing(null);
+              setEditingJson(undefined);
+              fetchWorkflows();
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleting && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md mx-4 p-6 rounded-2xl glass border border-white/10 backdrop-blur-lg"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+                  <Trash2 className="h-5 w-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Delete workflow</h3>
+                  <p className="text-sm text-gray-400">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-gray-300">
+                  You are about to delete{' '}
+                  <span className="font-medium text-white">{deleting.name}</span>
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setDeleting(null)}
+                  disabled={deletingLoading}
+                  className="px-4 py-2 rounded-lg glass border border-white/10 hover:bg-white/10 text-white transition-all duration-300 disabled:opacity-50"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => deleteWorkflow(deleting)}
+                  disabled={deletingLoading}
+                  className="px-4 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300 disabled:opacity-50"
+                >
+                  {deletingLoading ? 'Deleting...' : 'Delete'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
