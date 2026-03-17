@@ -10,52 +10,70 @@ datasource db {
 model Execution {
   id          String   @id @default(cuid())
   workflowId  String
-  status      String   // "pending" | "running" | "completed" | "failed" | "cancelled"
+  status      ExecutionStatus @default(PENDING)
   startedAt   DateTime @default(now())
   completedAt DateTime?
   error       String?
-  logs        Json?
   metadata    Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   steps       ExecutionStep[]
+  logs        ExecutionLog[]
 
   @@map("executions")
 }
 
 model ExecutionStep {
-  id          String   @id @default(cuid())
-  executionId String
-  workflowStepId String
-  status      String   // "pending" | "running" | "completed" | "failed" | "skipped"
-  startedAt   DateTime?
-  completedAt DateTime?
-  input       Json?
-  output      Json?
-  error       String?
-  retryCount  Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  executionId   String
+  nodeId        String   // Workflow node ID
+  nodeType      String   // "trigger" | "action"
+  status        ExecutionStatus @default(PENDING)
+  startedAt     DateTime?
+  completedAt   DateTime?
+  duration      Int?     // Duration in milliseconds
+  input         Json?
+  output        Json?
+  error         String?
+  retryCount    Int      @default(0)
+  maxRetries    Int      @default(3)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  execution   Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution     Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  logs          ExecutionLog[]
 
   @@map("execution_steps")
 }
 
-model Job {
+model ExecutionLog {
   id          String   @id @default(cuid())
-  name        String
-  data        Json
-  opts        Json?
-  priority    Int      @default(0)
-  delay       Int?
-  attemptsMade Int     @default(0)
-  failedReason String?
-  finishedOn  DateTime?
-  processedOn DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  executionId String
+  stepId      String?
+  level       LogLevel @default(INFO)
+  message     String
+  data        Json?
+  timestamp   DateTime @default(now())
 
-  @@map("jobs")
+  execution   Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  step        ExecutionStep? @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@map("execution_logs")
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  RETRYING
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
 }
