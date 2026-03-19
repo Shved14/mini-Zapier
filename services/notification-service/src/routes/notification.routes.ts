@@ -1,7 +1,16 @@
 import { Router } from "express";
 import { z } from "zod";
-import { create, list } from "../controllers/notification.controller";
+import {
+  create,
+  createInAppHandler,
+  list,
+  listMine,
+  unreadCount,
+  markRead,
+  markAllRead,
+} from "../controllers/notification.controller";
 import { validate } from "../middleware/validate";
+import { authenticate } from "../middleware/auth";
 
 const createSchema = z.object({
   userId: z.string().min(1, "userId is required"),
@@ -12,9 +21,25 @@ const createSchema = z.object({
   recipient: z.string().min(1, "recipient is required"),
 });
 
+const createInAppSchema = z.object({
+  userId: z.string().min(1),
+  type: z.string().min(1),
+  title: z.string().min(1).max(255),
+  message: z.string().min(1),
+  relatedId: z.string().optional(),
+});
+
 const router = Router();
 
+// Public / service-to-service routes
 router.get("/", list);
 router.post("/", validate(createSchema), create);
+router.post("/in-app", validate(createInAppSchema), createInAppHandler);
+
+// Authenticated user routes
+router.get("/me", authenticate, listMine);
+router.get("/me/unread-count", authenticate, unreadCount);
+router.patch("/:id/read", authenticate, markRead);
+router.post("/me/read-all", authenticate, markAllRead);
 
 export default router;

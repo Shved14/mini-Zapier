@@ -5,6 +5,16 @@ export type WorkflowMember = {
   workflowId: string;
   userId: string;
   role: string;
+  createdAt: string;
+  user?: { id: string; name?: string | null; email: string };
+};
+
+export type WorkflowInvite = {
+  id: string;
+  workflowId: string;
+  email: string;
+  token: string;
+  role: string;
   status: string;
   createdAt: string;
 };
@@ -12,6 +22,7 @@ export type WorkflowMember = {
 export type MembersResponse = {
   ownerId: string;
   members: WorkflowMember[];
+  invites: WorkflowInvite[];
 };
 
 export const membersApi = {
@@ -20,18 +31,18 @@ export const membersApi = {
     return res.data;
   },
 
-  async invite(workflowId: string, userId: string, role: string = "viewer") {
-    const res = await api.post<WorkflowMember>(`/workflows/${workflowId}/invite`, { userId, role });
+  async inviteByEmail(workflowId: string, email: string, role: string = "viewer") {
+    const res = await api.post<WorkflowInvite>(`/workflows/${workflowId}/invite`, { email, role });
     return res.data;
   },
 
-  async acceptInvite(workflowId: string, inviteId: string) {
-    const res = await api.post(`/workflows/${workflowId}/invite/${inviteId}/accept`);
+  async acceptInviteByToken(token: string) {
+    const res = await api.post(`/invite/${token}/accept`);
     return res.data;
   },
 
-  async declineInvite(workflowId: string, inviteId: string) {
-    const res = await api.post(`/workflows/${workflowId}/invite/${inviteId}/decline`);
+  async leave(workflowId: string) {
+    const res = await api.post(`/workflows/${workflowId}/leave`);
     return res.data;
   },
 

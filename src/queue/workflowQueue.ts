@@ -1,5 +1,5 @@
 import { Queue, JobsOptions } from "bullmq";
-import { getRedisClient } from "../config/redis";
+import { getRedisClientForBullMQ } from "../config/redis";
 import { env } from "../config/env";
 import { logger } from "../utils/logger";
 
@@ -16,9 +16,9 @@ let workflowQueue: Queue<WorkflowJobPayload> | null = null;
 
 export const getWorkflowQueue = (): Queue<WorkflowJobPayload> => {
   if (!workflowQueue) {
-    const connection = getRedisClient();
+    const connection = getRedisClientForBullMQ();
 
-    workflowQueue = new Queue<WorkflowJobPayload>(WORKFLOW_QUEUE_NAME, {
+    workflowQueue = new Queue(WORKFLOW_QUEUE_NAME, {
       connection,
       defaultJobOptions: {
         attempts: 3, // базовый ретрай
@@ -29,10 +29,10 @@ export const getWorkflowQueue = (): Queue<WorkflowJobPayload> => {
         removeOnComplete: 1000,
         removeOnFail: 1000,
       },
-    });
+    }) as Queue<WorkflowJobPayload>;
   }
 
-  return workflowQueue;
+  return workflowQueue!;
 };
 
 export const enqueueWorkflowJob = async (

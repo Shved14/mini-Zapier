@@ -18,6 +18,7 @@ const createWorkflowSchema = z.object({
 const updateWorkflowSchema = z.object({
   name: z.string().min(1, "Name is required").max(255).optional(),
   workflowJson: workflowJsonSchema.optional(),
+  slackWebhook: z.string().optional(),
 });
 
 const router = Router();

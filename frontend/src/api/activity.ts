@@ -7,6 +7,7 @@ export type ActivityLog = {
   action: string;
   metadata: Record<string, unknown> | null;
   createdAt: string;
+  user?: { id: string; name?: string | null; email: string };
 };
 
 export const activityApi = {

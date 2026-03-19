@@ -100,10 +100,11 @@ export async function update(
   try {
     const user = (req as any).user;
     const { id } = req.params;
-    const { name, workflowJson } = req.body;
-    const workflow = await updateWorkflow(id, user.userId, { name, workflowJson });
+    const { name, workflowJson, slackWebhook } = req.body;
+    const workflow = await updateWorkflow(id, user.userId, { name, workflowJson, slackWebhook });
     if (name) await logActivity(id, user.userId, "workflow_renamed", { name });
     if (workflowJson) await logActivity(id, user.userId, "workflow_updated", {});
+    if (slackWebhook !== undefined) await logActivity(id, user.userId, "settings_updated", { slackWebhook: !!slackWebhook });
     if ((workflow as any).slackWebhook && workflowJson) {
       notifySlack((workflow as any).slackWebhook, "Workflow Updated", `'${workflow.name}' was updated`);
     }

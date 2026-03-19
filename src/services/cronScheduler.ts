@@ -14,16 +14,18 @@ export const initCronScheduler = async () => {
   const workflows = await prisma.workflow.findMany({
     where: {
       isActive: true,
-      triggerType: "cron",
     },
     select: {
       id: true,
-      triggerConfig: true,
+      trigger: true,
     },
   });
 
   for (const wf of workflows) {
-    const cfg = wf.triggerConfig as unknown as CronTriggerConfig;
+    const triggerData = wf.trigger as unknown as { type: string; config: CronTriggerConfig };
+    if (triggerData.type !== "cron") continue;
+
+    const cfg = triggerData.config;
     const expression = cfg?.expression;
 
     if (!expression || !cron.validate(expression)) {

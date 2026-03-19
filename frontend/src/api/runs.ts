@@ -30,17 +30,17 @@ export type WorkflowRun = {
 
 export const runsApi = {
   async list(): Promise<WorkflowRun[]> {
-    const res = await api.get<WorkflowRun[]>("/execute/jobs");
-    return res.data;
+    const res = await api.get<{ items: WorkflowRun[] }>("/runs");
+    return res.data.items ?? res.data as any;
   },
 
   async get(id: string): Promise<WorkflowRun> {
-    const res = await api.get<WorkflowRun>(`/execute/jobs/${id}`);
+    const res = await api.get<WorkflowRun>(`/runs/${id}`);
     return res.data;
   },
 
   async resume(id: string) {
-    const res = await api.post(`/execute/jobs/${id}/resume`, {});
+    const res = await api.post(`/runs/${id}/resume`, {});
     return res.data;
   },
 };

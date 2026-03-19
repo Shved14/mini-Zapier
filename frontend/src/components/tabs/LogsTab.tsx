@@ -6,8 +6,17 @@ const actionLabels: Record<string, string> = {
   workflow_created: "created the workflow",
   workflow_renamed: "renamed the workflow",
   workflow_updated: "updated the workflow",
+  workflow_executed: "executed the workflow",
+  workflow_deleted: "deleted the workflow",
   status_changed: "changed workflow status",
+  settings_updated: "updated settings",
+  node_added: "added a node",
+  node_removed: "removed a node",
+  node_connected: "connected nodes",
+  node_config_updated: "updated node config",
   member_invited: "invited a member",
+  member_joined: "joined the workflow",
+  member_left: "left the workflow",
   member_removed: "removed a member",
   invite_accepted: "accepted the invite",
   workflow_run: "ran the workflow",
@@ -78,18 +87,26 @@ export const LogsTab: React.FC<LogsTabProps> = ({ workflowId }) => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <span className="text-sm text-white font-medium truncate">
-                    {log.userId.slice(0, 8)}...
+                    {(log as any).user?.name || (log as any).user?.email || log.userId.slice(0, 8) + "..."}
                   </span>
                   <span className="text-sm text-gray-400">{label}</span>
-                  {meta && meta.name && (
-                    <span className="text-sm text-purple-300">"{String(meta.name)}"</span>
+                  {meta && meta.name != null && (
+                    <span className="text-sm text-purple-300">&quot;{String(meta.name)}&quot;</span>
                   )}
-                  {meta && meta.status && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      meta.status === "active"
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : "bg-amber-500/20 text-amber-300"
-                    }`}>{String(meta.status)}</span>
+                  {meta && meta.email != null && (
+                    <span className="text-sm text-blue-300">{String(meta.email)}</span>
+                  )}
+                  {meta && meta.status != null && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${String(meta.status) === "active" || meta.isActive === true
+                      ? "bg-emerald-500/20 text-emerald-300"
+                      : "bg-amber-500/20 text-amber-300"
+                      }`}>{String(meta.status ?? (meta.isActive ? "active" : "paused"))}</span>
+                  )}
+                  {meta && meta.isActive !== undefined && meta.status == null && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${meta.isActive
+                      ? "bg-emerald-500/20 text-emerald-300"
+                      : "bg-amber-500/20 text-amber-300"
+                      }`}>{meta.isActive ? "active" : "paused"}</span>
                   )}
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">

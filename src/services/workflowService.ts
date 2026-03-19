@@ -1,26 +1,54 @@
 import { prisma } from "../config/prisma";
+import { validateWorkflowJson } from "../utils/workflowValidator";
+import { activityLogService } from "./activityLogService";
+import { slackService } from "./slackService";
 
 type CreateWorkflowInput = {
   name: string;
+  description?: string;
   isActive?: boolean;
-  triggerType: string;
-  triggerConfig?: unknown;
+  trigger?: unknown;
+  nodes?: unknown;
+  edges?: unknown;
+  settings?: unknown;
   workflowJson?: unknown;
+  slackWebhook?: string;
 };
 
 type UpdateWorkflowInput = Partial<CreateWorkflowInput>;
 
 export const workflowService = {
   async create(data: CreateWorkflowInput, ownerUserId?: string) {
+    if (!data.name || !data.name.trim()) {
+      const err = new Error("Workflow name is required");
+      (err as any).statusCode = 400;
+      throw err;
+    }
+
     const { workflowJson, ...rest } = data;
+
+    // Validate workflowJson if provided
+    if (workflowJson) {
+      const validation = validateWorkflowJson(workflowJson);
+      if (!validation.valid) {
+        const err = new Error("Invalid workflow JSON: " + validation.errors.map(e => `${e.field}: ${e.message}`).join("; "));
+        (err as any).statusCode = 400;
+        (err as any).details = validation.errors;
+        throw err;
+      }
+    }
 
     const workflow = await prisma.workflow.create({
       data: {
-        name: rest.name,
+        name: rest.name.trim(),
+        description: rest.description,
+        userId: ownerUserId || "",
         isActive: rest.isActive ?? true,
-        triggerType: rest.triggerType,
-        triggerConfig: (rest.triggerConfig ?? {}) as any,
-        ...(ownerUserId ? { userId: ownerUserId } : {}),
+        trigger: (rest.trigger ?? { type: "manual", config: {} }) as any,
+        nodes: (rest.nodes ?? []) as any,
+        edges: (rest.edges ?? []) as any,
+        settings: (rest.settings ?? {}) as any,
+        slackWebhook: rest.slackWebhook ?? null,
       },
     });
 
@@ -34,11 +62,42 @@ export const workflowService = {
       });
     }
 
+    // Create owner as member
+    if (ownerUserId) {
+      await prisma.workflowMember.create({
+        data: {
+          workflowId: workflow.id,
+          userId: ownerUserId,
+          role: "owner",
+        },
+      });
+
+      await activityLogService.log({
+        workflowId: workflow.id,
+        userId: ownerUserId,
+        action: "workflow_created",
+        metadata: { name: workflow.name },
+      });
+    }
+
     return workflow;
   },
 
-  async list() {
+  async list(userId?: string) {
+    if (!userId) {
+      return prisma.workflow.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+    }
+
+    // Return workflows where user is owner or member
     return prisma.workflow.findMany({
+      where: {
+        OR: [
+          { userId },
+          { members: { some: { userId } } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
     });
   },
@@ -46,6 +105,11 @@ export const workflowService = {
   async getById(id: string) {
     const workflow = await prisma.workflow.findUnique({
       where: { id },
+      include: {
+        members: {
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
+      },
     });
 
     if (!workflow) {
@@ -54,24 +118,45 @@ export const workflowService = {
       throw err;
     }
 
-    return workflow;
+    // Get latest workflow version
+    const latestVersion = await prisma.workflowVersion.findFirst({
+      where: { workflowId: id },
+      orderBy: { version: "desc" },
+    });
+
+    return {
+      ...workflow,
+      workflowJson: latestVersion?.workflowJson ?? null,
+    };
   },
 
-  async update(id: string, data: UpdateWorkflowInput) {
+  async update(id: string, data: UpdateWorkflowInput, userId?: string) {
     const { workflowJson, ...rest } = data;
+
+    // Validate workflowJson if provided
+    if (workflowJson) {
+      const validation = validateWorkflowJson(workflowJson);
+      if (!validation.valid) {
+        const err = new Error("Invalid workflow JSON: " + validation.errors.map(e => `${e.field}: ${e.message}`).join("; "));
+        (err as any).statusCode = 400;
+        (err as any).details = validation.errors;
+        throw err;
+      }
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (rest.name !== undefined) updateData.name = rest.name.trim();
+    if (rest.description !== undefined) updateData.description = rest.description;
+    if (rest.isActive !== undefined) updateData.isActive = rest.isActive;
+    if (rest.trigger !== undefined) updateData.trigger = rest.trigger as any;
+    if (rest.nodes !== undefined) updateData.nodes = rest.nodes as any;
+    if (rest.edges !== undefined) updateData.edges = rest.edges as any;
+    if (rest.settings !== undefined) updateData.settings = rest.settings as any;
+    if (rest.slackWebhook !== undefined) updateData.slackWebhook = rest.slackWebhook || null;
 
     const workflow = await prisma.workflow.update({
       where: { id },
-      data: {
-        ...(rest.name !== undefined ? { name: rest.name } : {}),
-        ...(rest.isActive !== undefined ? { isActive: rest.isActive } : {}),
-        ...(rest.triggerType !== undefined
-          ? { triggerType: rest.triggerType }
-          : {}),
-        ...(rest.triggerConfig !== undefined
-          ? { triggerConfig: rest.triggerConfig as any }
-          : {}),
-      },
+      data: updateData,
     });
 
     if (workflowJson) {
@@ -91,6 +176,48 @@ export const workflowService = {
       });
     }
 
+    // Activity logging
+    if (userId) {
+      if (rest.name !== undefined) {
+        await activityLogService.log({
+          workflowId: id,
+          userId,
+          action: "workflow_renamed",
+          metadata: { name: rest.name },
+        });
+      }
+      if (workflowJson) {
+        await activityLogService.log({
+          workflowId: id,
+          userId,
+          action: "workflow_updated",
+        });
+      }
+      if (rest.isActive !== undefined) {
+        await activityLogService.log({
+          workflowId: id,
+          userId,
+          action: "status_changed",
+          metadata: { isActive: rest.isActive },
+        });
+      }
+      if (rest.slackWebhook !== undefined) {
+        await activityLogService.log({
+          workflowId: id,
+          userId,
+          action: "settings_updated",
+          metadata: { slackWebhook: rest.slackWebhook ? "set" : "removed" },
+        });
+      }
+    }
+
+    // Slack notification for updates
+    await slackService.sendWebhook(id, "Workflow updated", {
+      name: workflow.name,
+      ...(rest.name !== undefined ? { newName: rest.name } : {}),
+      ...(rest.isActive !== undefined ? { isActive: rest.isActive } : {}),
+    });
+
     return workflow;
   },
 
@@ -105,7 +232,6 @@ export const workflowService = {
       throw err;
     }
 
-    // Если у workflow есть владелец, только он может удалить
     if (workflow.userId && workflow.userId !== currentUserId) {
       const err = new Error("You are not allowed to delete this workflow");
       (err as any).statusCode = 403;

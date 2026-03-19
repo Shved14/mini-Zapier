@@ -2,25 +2,35 @@ import { prisma } from "../config/prisma";
 import { enqueueWorkflowJob } from "../queue/workflowQueue";
 
 export const runService = {
-  async list() {
-    return prisma.workflowRun.findMany({
-      orderBy: { startedAt: "desc" },
-      include: {
+  async list(userId?: string) {
+    const where = userId
+      ? {
         workflow: {
-          select: { id: true, name: true },
+          OR: [
+            { userId },
+            { members: { some: { userId } } },
+          ],
         },
+      }
+      : {};
+
+    const runs = await prisma.workflowRun.findMany({
+      where,
+      orderBy: { startedAt: "desc" },
+      take: 100,
+      include: {
+        workflow: { select: { id: true, name: true } },
       },
     });
+
+    return runs;
   },
 
   async getById(id: string) {
     const run = await prisma.workflowRun.findUnique({
       where: { id },
       include: {
-        workflow: {
-          select: { id: true, name: true },
-        },
-        stepLogs: true,
+        workflow: { select: { id: true, name: true } },
       },
     });
 

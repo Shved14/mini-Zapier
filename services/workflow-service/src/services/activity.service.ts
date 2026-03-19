@@ -7,7 +7,7 @@ export async function logActivity(
   metadata?: Record<string, unknown>
 ) {
   return prisma.activityLog.create({
-    data: { workflowId, userId, action, metadata: metadata ?? undefined },
+    data: { workflowId, userId, action, metadata: metadata as any ?? undefined },
   });
 }
 

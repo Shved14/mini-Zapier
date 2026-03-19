@@ -10,6 +10,7 @@ import { WorkflowEditor } from "../components/WorkflowEditor";
 import { MembersTab } from "../components/tabs/MembersTab";
 import { LogsTab } from "../components/tabs/LogsTab";
 import { SettingsTab } from "../components/tabs/SettingsTab";
+import { useAuthStore } from "../store/useAuthStore";
 
 const tabs = [
   { id: "editor", label: "Editor", icon: FileText },
@@ -23,6 +24,7 @@ type TabId = (typeof tabs)[number]["id"];
 export const WorkflowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,12 +77,23 @@ export const WorkflowDetailPage: React.FC = () => {
 
   const handleStatusToggle = async () => {
     if (!workflow) return;
-    const newStatus = workflow.status === "active" ? "paused" : "active";
+    const newActive = !workflow.isActive;
     try {
-      const updated = await workflowsApi.patchStatus(workflow.id, newStatus);
-      setWorkflow((prev) => prev ? { ...prev, status: updated.status } : prev);
+      const updated = await workflowsApi.update(workflow.id, { isActive: newActive });
+      setWorkflow((prev) => prev ? { ...prev, isActive: updated.isActive ?? newActive } : prev);
     } catch { /* silently fail */ }
   };
+
+  // Determine user's role
+  const myRole = (() => {
+    if (!workflow || !user) return "viewer";
+    if (workflow.userId === user.id) return "owner";
+    const member = (workflow as any).members?.find((m: any) => m.userId === user.id);
+    return member?.role || "viewer";
+  })();
+
+  const canEdit = myRole === "owner" || myRole === "editor";
+  const canDelete = myRole === "owner";
 
   const handleRun = async () => {
     if (!workflow) return;
@@ -163,41 +176,51 @@ export const WorkflowDetailPage: React.FC = () => {
           )}
 
           {/* Status badge */}
-          <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${
-            workflow.status === "active"
+          <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${workflow.isActive
               ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
               : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-          }`}>
-            {workflow.status === "active" ? "Active" : "Paused"}
+            }`}>
+            {workflow.isActive ? "Active" : "Paused"}
+          </span>
+
+          {/* Role badge */}
+          <span className="shrink-0 px-2 py-0.5 rounded-full text-xs bg-white/5 text-gray-400 border border-white/10">
+            {myRole}
           </span>
         </div>
 
-        {/* Actions */}
+        {/* Actions — role-based */}
         <div className="flex items-center gap-2 shrink-0">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleRun}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 text-sm transition-all"
-          >
-            <Play className="h-4 w-4" /> Run
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleStatusToggle}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 text-sm transition-all"
-          >
-            <Pause className="h-4 w-4" /> {workflow.status === "active" ? "Pause" : "Resume"}
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowDelete(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 text-sm transition-all"
-          >
-            <Trash2 className="h-4 w-4" /> Delete
-          </motion.button>
+          {canEdit && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleRun}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 text-sm transition-all"
+            >
+              <Play className="h-4 w-4" /> Run
+            </motion.button>
+          )}
+          {canEdit && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleStatusToggle}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 text-sm transition-all"
+            >
+              <Pause className="h-4 w-4" /> {workflow.isActive ? "Pause" : "Resume"}
+            </motion.button>
+          )}
+          {canDelete && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowDelete(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 text-sm transition-all"
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </motion.button>
+          )}
         </div>
       </div>
 
@@ -210,11 +233,10 @@ export const WorkflowDetailPage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${
-                isActive
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${isActive
                   ? "border-purple-500 text-white"
                   : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600"
-              }`}
+                }`}
             >
               <Icon className="h-4 w-4" />
               {tab.label}

@@ -2,8 +2,9 @@ import { Request, Response } from "express";
 import { runService } from "../services/runService";
 
 export const runController = {
-  async list(_req: Request, res: Response) {
-    const runs = await runService.list();
+  async list(req: Request, res: Response) {
+    const user = (req as any).user as { userId?: string } | undefined;
+    const runs = await runService.list(user?.userId);
     res.json({ items: runs });
   },
 

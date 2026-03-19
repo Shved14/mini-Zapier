@@ -21,13 +21,20 @@ export const errorHandler = (
   _next: NextFunction
 ) => {
   const status =
-    err instanceof AppError ? err.statusCode : 500;
+    err instanceof AppError
+      ? err.statusCode
+      : (err as any).statusCode ?? 500;
 
-  logger.error("Unhandled error", err);
+  const isOperational =
+    err instanceof AppError ? err.isOperational : !!(err as any).statusCode;
+
+  if (!isOperational) {
+    logger.error("Unhandled error", err);
+  }
 
   res.status(status).json({
-    message:
-      err instanceof AppError ? err.message : "Internal Server Error",
+    message: isOperational ? err.message : "Internal Server Error",
+    ...((err as any).details ? { details: (err as any).details } : {}),
   });
 };
 

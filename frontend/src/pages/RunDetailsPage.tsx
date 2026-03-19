@@ -48,7 +48,7 @@ export const RunDetailsPage: React.FC<RunDetailsPageProps> = ({ runId }) => {
     const durationMs =
       step.startedAt && step.finishedAt
         ? new Date(step.finishedAt).getTime() -
-          new Date(step.startedAt).getTime()
+        new Date(step.startedAt).getTime()
         : undefined;
 
     return (
@@ -68,13 +68,12 @@ export const RunDetailsPage: React.FC<RunDetailsPageProps> = ({ runId }) => {
             </div>
           </div>
           <span
-            className={`px-2 py-0.5 text-xs rounded-full ${
-              step.status === "success"
+            className={`px-2 py-0.5 text-xs rounded-full ${step.status === "success"
                 ? "bg-emerald-500/10 text-emerald-300"
                 : step.status === "failed"
-                ? "bg-red-500/10 text-red-300"
-                : "bg-slate-700 text-slate-300"
-            }`}
+                  ? "bg-red-500/10 text-red-300"
+                  : "bg-slate-700 text-slate-300"
+              }`}
           >
             {step.status}
           </span>
@@ -113,8 +112,8 @@ export const RunDetailsPage: React.FC<RunDetailsPageProps> = ({ runId }) => {
         </div>
       </div>
       <div className="space-y-2">
-        {(run.stepLogs ?? []).map(renderStep)}
-        {(!run.stepLogs || run.stepLogs.length === 0) && (
+        {((run as any).steps ?? run.stepLogs ?? []).map(renderStep)}
+        {(!((run as any).steps?.length || run.stepLogs?.length)) && (
           <div className="text-sm text-slate-500">
             No step logs for this run yet.
           </div>

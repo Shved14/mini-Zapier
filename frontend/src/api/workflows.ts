@@ -26,8 +26,8 @@ export type Workflow = {
 
 export const workflowsApi = {
   async list(): Promise<Workflow[]> {
-    const res = await api.get<Workflow[]>("/workflows");
-    return res.data;
+    const res = await api.get<{ items: Workflow[] } | Workflow[]>("/workflows");
+    return Array.isArray(res.data) ? res.data : (res.data as any).items ?? [];
   },
 
   async get(id: string): Promise<Workflow> {
@@ -62,10 +62,7 @@ export const workflowsApi = {
   },
 
   async run(id: string, payload?: unknown) {
-    const res = await api.post(`/execute`, {
-      workflowId: id,
-      input: payload ?? {},
-    });
+    const res = await api.post(`/workflows/${id}/run`, payload ?? {});
     return res.data;
   },
 };

@@ -51,11 +51,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ workflow, onUpdate }) 
             <div>
               <span className="text-gray-500">Status</span>
               <div className="mt-1">
-                <span className={`px-2 py-0.5 rounded-full text-xs ${
-                  workflow.status === "active"
+                <span className={`px-2 py-0.5 rounded-full text-xs ${workflow.isActive
                     ? "bg-emerald-500/20 text-emerald-300"
                     : "bg-amber-500/20 text-amber-300"
-                }`}>{workflow.status}</span>
+                  }`}>{workflow.isActive ? "Active" : "Paused"}</span>
               </div>
             </div>
           </div>

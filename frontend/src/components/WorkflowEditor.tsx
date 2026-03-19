@@ -165,10 +165,9 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       };
       await workflowsApi.update(workflow.id, { workflowJson });
       setSaveSuccess(true);
-    } catch (err) {
-      setSaveError(
-        err instanceof Error ? err.message : "Failed to save workflow"
-      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to save workflow");
+      setSaveError(msg);
     } finally {
       setSaving(false);
     }

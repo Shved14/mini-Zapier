@@ -7,16 +7,49 @@ import { env } from "../config/env";
 export const authController = {
   async register(req: Request, res: Response) {
     const { email, password, name } = req.body ?? {};
-    if (!email || !password) {
+    if (!email || !password || !name) {
       return res
         .status(400)
-        .json({ message: "Email and password are required" });
+        .json({ message: "Name, email and password are required" });
     }
-    const result = await authService.register(email, password, name);
+    // Step 1: Send verification code instead of creating user immediately
+    const result = await authService.sendVerificationCode(email);
+    res.status(200).json(result);
+  },
+
+  async verifyEmail(req: Request, res: Response) {
+    const { email, code, password, name } = req.body ?? {};
+    if (!email || !code || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email, code and password are required" });
+    }
+    const result = await authService.verifyEmailAndRegister(email, code, password, name);
     res.status(201).json({
       user: { id: result.user.id, email: result.user.email, name: result.user.name },
       token: result.token,
     });
+  },
+
+  async me(req: Request, res: Response) {
+    const user = (req as any).user as { userId?: string } | undefined;
+    if (!user?.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const { userService } = await import("../services/userService");
+    const me = await userService.getMe(user.userId);
+    res.json(me);
+  },
+
+  async updateMe(req: Request, res: Response) {
+    const user = (req as any).user as { userId?: string } | undefined;
+    if (!user?.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const { name } = req.body ?? {};
+    const { userService } = await import("../services/userService");
+    const updated = await userService.updateMe(user.userId, { name });
+    res.json(updated);
   },
 
   async login(req: Request, res: Response) {

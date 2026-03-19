@@ -14,6 +14,12 @@ enum WorkflowRunStatus {
   paused
 }
 
+enum WorkflowStatus {
+  draft
+  active
+  inactive
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -22,8 +28,20 @@ model User {
   provider  String?
   createdAt DateTime @default(now())
 
-  subscriptions Subscription[]
-  workflows     Workflow[]
+  subscriptions    Subscription[]
+  workflows        Workflow[]
+  workflowMembers  WorkflowMember[]
+  activityLogs     ActivityLog[]
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
 }
 
 model Subscription {
@@ -42,19 +60,81 @@ model Subscription {
 model Workflow {
   id            String   @id @default(cuid())
   name          String
+  description   String?
+  userId        String
+  status        WorkflowStatus @default(draft)
+  trigger       Json     @default("{}")
+  nodes         Json     @default("[]")
+  edges         Json     @default("[]")
+  settings      Json     @default("{}")
+  slackWebhook  String?
   isActive      Boolean  @default(true)
-  triggerType   String
-  triggerConfig Json
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  userId String?
-  user   User?    @relation(fields: [userId], references: [id])
-
+  user     User     @relation(fields: [userId], references: [id])
   versions WorkflowVersion[]
   runs     WorkflowRun[]
+  members  WorkflowMember[]
+  invites  WorkflowInvite[]
+  logs     ActivityLog[]
 
   @@index([isActive])
-  @@index([triggerType])
+  @@index([status])
+  @@index([userId])
+}
+
+enum MemberRole {
+  owner
+  editor
+  viewer
+}
+
+model WorkflowMember {
+  id         String     @id @default(uuid())
+  workflowId String
+  userId     String
+  role       MemberRole @default(viewer)
+  createdAt  DateTime   @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, userId])
+  @@index([workflowId])
+  @@index([userId])
+}
+
+model WorkflowInvite {
+  id         String   @id @default(uuid())
+  workflowId String
+  email      String
+  token      String   @unique
+  role       MemberRole @default(viewer)
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([email])
+  @@index([token])
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  workflowId String
+  userId     String
+  action     String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model WorkflowVersion {

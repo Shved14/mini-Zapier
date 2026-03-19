@@ -8,6 +8,7 @@ import { RunDetailsPage } from "./pages/RunDetailsPage";
 import { StatsPage } from "./pages/StatsPage";
 import { LandingPage } from "./pages/LandingPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { useAuthStore } from "./store/useAuthStore";
 
 const ProtectedRoutes: React.FC = () => {
@@ -105,6 +106,7 @@ const App: React.FC = () => {
             )
           }
         />
+        <Route path="/invite/:token" element={<InviteAcceptPage />} />
         <Route path="/*" element={<ProtectedRoutes />} />
       </Routes>
     </Router>

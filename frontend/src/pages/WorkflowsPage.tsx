@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "../store/useAppStore";
 import { Workflow } from "../api/workflows";
-import { Plus, Play, Trash2, Zap, Clock, ArrowRight } from "lucide-react";
+import { Plus, Play, Trash2, Zap, Clock, ArrowRight, X } from "lucide-react";
 
 export const WorkflowsPage: React.FC = () => {
   const { workflows, loading, error, fetchWorkflows, createWorkflow, deleteWorkflow: storeDelete, runWorkflow } = useAppStore();
@@ -12,17 +12,29 @@ export const WorkflowsPage: React.FC = () => {
   const [deletingLoading, setDeletingLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Create modal state
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
+
   useEffect(() => {
     fetchWorkflows();
   }, [fetchWorkflows]);
 
-  const createNewWorkflow = async () => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setCreating(true);
     setActionError(null);
     try {
-      const newWorkflow = await createWorkflow("New workflow");
+      const newWorkflow = await createWorkflow(newName.trim());
+      setShowCreate(false);
+      setNewName("");
       navigate(`/workflows/${newWorkflow.id}`);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to create workflow");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -66,7 +78,7 @@ export const WorkflowsPage: React.FC = () => {
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
-          onClick={createNewWorkflow}
+          onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 text-sm"
         >
           <Plus className="h-4 w-4" />
@@ -120,8 +132,8 @@ export const WorkflowsPage: React.FC = () => {
                       </div>
                     </div>
                     <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium ${isActive
-                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
-                        : "bg-gray-500/20 text-gray-400 border border-gray-500/20"
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                      : "bg-gray-500/20 text-gray-400 border border-gray-500/20"
                       }`}>
                       {isActive ? "Active" : "Paused"}
                     </span>
@@ -174,7 +186,7 @@ export const WorkflowsPage: React.FC = () => {
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            onClick={createNewWorkflow}
+            onClick={() => setShowCreate(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-medium text-sm"
           >
             <Plus className="h-4 w-4" /> Create workflow
@@ -213,6 +225,62 @@ export const WorkflowsPage: React.FC = () => {
                 <button onClick={() => setDeleting(null)} disabled={deletingLoading} className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/5 text-white text-sm transition-all disabled:opacity-50">Cancel</button>
                 <button onClick={() => handleDelete(deleting)} disabled={deletingLoading} className="px-4 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 text-sm transition-all disabled:opacity-50">{deletingLoading ? "Deleting..." : "Delete"}</button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Workflow Modal */}
+      <AnimatePresence>
+        {showCreate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowCreate(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm mx-4 p-6 rounded-2xl bg-slate-900 border border-white/10 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-white">Create workflow</h3>
+                <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-white transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <form onSubmit={handleCreateSubmit}>
+                <label className="block text-xs text-gray-400 mb-1">Workflow name</label>
+                <input
+                  autoFocus
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="My awesome workflow"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 mb-4"
+                />
+                {actionError && <p className="text-xs text-red-400 mb-3">{actionError}</p>}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setShowCreate(false); setNewName(""); }}
+                    disabled={creating}
+                    className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/5 text-white text-sm transition-all disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creating || !newName.trim()}
+                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 text-white text-sm font-medium disabled:opacity-50 transition-all"
+                  >
+                    {creating ? "Creating..." : "Create"}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}

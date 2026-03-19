@@ -14,7 +14,8 @@ type AuthState = {
   error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<{ needsVerification: boolean }>;
+  verifyEmail: (email: string, code: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   fetchUser: () => Promise<void>;
   setToken: (token: string) => void;
@@ -44,12 +45,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (email: string, password: string, name: string) => {
     set({ loading: true, error: null });
     try {
-      const res = await api.post("/auth/register", { email, password, name });
+      await api.post("/auth/register", { email, password, name });
+      set({ loading: false });
+      return { needsVerification: true };
+    } catch (err: any) {
+      const message = err.response?.data?.message || "Registration failed";
+      set({ error: message, loading: false });
+      throw new Error(message);
+    }
+  },
+
+  verifyEmail: async (email: string, code: string, password: string, name: string) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.post("/auth/verify-email", { email, code, password, name });
       const { token, user } = res.data;
       localStorage.setItem("token", token);
       set({ token, user, loading: false });
     } catch (err: any) {
-      const message = err.response?.data?.message || "Registration failed";
+      const message = err.response?.data?.message || "Verification failed";
       set({ error: message, loading: false });
       throw new Error(message);
     }

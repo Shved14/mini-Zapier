@@ -19,3 +19,8 @@ export const getRedisClient = (): Redis => {
   return redisClient;
 };
 
+// Export a type-compatible version for BullMQ
+export const getRedisClientForBullMQ = (): any => {
+  return getRedisClient();
+};
+

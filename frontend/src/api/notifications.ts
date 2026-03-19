@@ -15,12 +15,12 @@ export type Notification = {
 
 export const notificationsApi = {
   async list(): Promise<Notification[]> {
-    const res = await api.get<Notification[]>("/notifications");
+    const res = await api.get<Notification[]>("/notifications/me");
     return res.data;
   },
 
   async unreadCount(): Promise<number> {
-    const res = await api.get<{ count: number }>("/notifications/unread-count");
+    const res = await api.get<{ count: number }>("/notifications/me/unread-count");
     return res.data.count;
   },
 
@@ -30,7 +30,7 @@ export const notificationsApi = {
   },
 
   async markAllRead() {
-    const res = await api.patch("/notifications/read-all");
+    const res = await api.post("/notifications/me/read-all");
     return res.data;
   },
 };

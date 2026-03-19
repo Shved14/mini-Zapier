@@ -106,7 +106,7 @@ export async function createWorkflow(input: CreateWorkflowInput) {
   return workflow;
 }
 
-export async function updateWorkflow(id: string, userId: string, data: { name?: string; workflowJson?: unknown }) {
+export async function updateWorkflow(id: string, userId: string, data: { name?: string; workflowJson?: unknown; slackWebhook?: string }) {
   const workflow = await prisma.workflow.findUnique({ where: { id } });
 
   if (!workflow) {
@@ -126,6 +126,10 @@ export async function updateWorkflow(id: string, userId: string, data: { name?: 
   if (data.workflowJson !== undefined) {
     const validated = validateWorkflowJson(data.workflowJson);
     updateData.workflowJson = validated as any;
+  }
+
+  if (data.slackWebhook !== undefined) {
+    updateData.slackWebhook = data.slackWebhook;
   }
 
   return prisma.workflow.update({

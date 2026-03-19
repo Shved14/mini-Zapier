@@ -1,10 +1,28 @@
 import { Request, Response, NextFunction } from "express";
-import { createAndSend, getByUser, AppError } from "../services/notification.service";
+import {
+  createAndSend,
+  getByUser,
+  getUnreadCount,
+  markRead as markReadService,
+  markAllRead as markAllReadService,
+  createInApp,
+  AppError,
+} from "../services/notification.service";
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { userId, type, channel, title, message, recipient } = req.body;
     const notification = await createAndSend({ userId, type, channel, title, message, recipient });
+    res.status(201).json(notification);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createInAppHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { userId, type, title, message, relatedId } = req.body;
+    const notification = await createInApp({ userId, type, title, message, relatedId });
     res.status(201).json(notification);
   } catch (error) {
     next(error);
@@ -20,6 +38,62 @@ export async function list(req: Request, res: Response, next: NextFunction): Pro
     }
     const notifications = await getByUser(userId);
     res.json(notifications);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listMine(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const notifications = await getByUser(userId);
+    res.json(notifications);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function unreadCount(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const count = await getUnreadCount(userId);
+    res.json({ count });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function markRead(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const notification = await markReadService(req.params.id, userId);
+    res.json(notification);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function markAllRead(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const result = await markAllReadService(userId);
+    res.json(result);
   } catch (error) {
     next(error);
   }

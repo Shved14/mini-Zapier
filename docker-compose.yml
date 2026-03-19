@@ -34,7 +34,7 @@ services:
       - "3001:3001"
     environment:
       PORT: 3001
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=auth
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
       JWT_EXPIRES_IN: ${JWT_EXPIRATION:-7d}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3007}
@@ -56,7 +56,7 @@ services:
       - "3002:3002"
     environment:
       PORT: 3002
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=workflow
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
     depends_on:
       postgres:
@@ -82,7 +82,8 @@ services:
       - "3006:3006"
     environment:
       PORT: 3006
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=notification
+      JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}

@@ -1,6 +1,6 @@
 import { Worker, Job } from "bullmq";
 import { WORKFLOW_QUEUE_NAME } from "../queue";
-import { getRedisClient } from "../config/redis";
+import { getRedisClientForBullMQ } from "../config/redis";
 import { logger } from "../utils/logger";
 import { executeWorkflowRun } from "../services/workflowEngine";
 
@@ -12,7 +12,7 @@ type WorkflowJobData = {
 };
 
 export const startWorkflowWorker = () => {
-  const connection = getRedisClient();
+  const connection = getRedisClientForBullMQ();
 
   const worker = new Worker<WorkflowJobData>(
     WORKFLOW_QUEUE_NAME,
