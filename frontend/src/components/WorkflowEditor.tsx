@@ -17,6 +17,7 @@ type WorkflowEditorProps = {
   workflow: Workflow;
   onClose: () => void;
   initialWorkflowJson?: any;
+  embedded?: boolean;
 };
 
 const nodeTypeLabels: Record<string, string> = {
@@ -48,6 +49,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   workflow,
   onClose,
   initialWorkflowJson,
+  embedded = false,
 }) => {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [configText, setConfigText] = useState<string>("{}");
@@ -117,24 +119,24 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         nds.map((n) =>
           n.id === selectedNode.id
             ? {
-                ...n,
-                data: {
-                  ...n.data,
-                  config: parsed,
-                },
-              }
-            : n
-        )
-      );
-      setSelectedNode((n) =>
-        n
-          ? {
               ...n,
               data: {
                 ...n.data,
                 config: parsed,
               },
             }
+            : n
+        )
+      );
+      setSelectedNode((n) =>
+        n
+          ? {
+            ...n,
+            data: {
+              ...n.data,
+              config: parsed,
+            },
+          }
           : n
       );
       setSaveError(undefined);
@@ -172,9 +174,9 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center">
-      <div className="bg-slate-950 border border-slate-800 rounded-xl w-[95vw] h-[90vh] flex flex-col shadow-xl">
+  const editorContent = (
+    <div className={embedded ? "flex flex-col h-full" : "bg-slate-950 border border-slate-800 rounded-xl w-[95vw] h-[90vh] flex flex-col shadow-xl"}>
+      {!embedded && (
         <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center">
           <div>
             <div className="text-sm font-semibold">
@@ -208,65 +210,85 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             </button>
           </div>
         </div>
-        <div className="flex-1 flex">
-          <div className="w-52 border-r border-slate-800 p-3 space-y-2 bg-slate-900/60">
-            <div className="text-xs font-semibold text-slate-300 mb-1">
-              Nodes
-            </div>
-            {paletteNodes.map((type) => (
-              <button
-                key={type}
-                className="w-full text-left text-xs px-2 py-1.5 rounded-md border border-slate-700 hover:bg-slate-800"
-                onClick={() => handleAddNode(type)}
-              >
-                {nodeTypeLabels[type] ?? type}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 relative">
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              fitView
-              onNodeClick={(_, node) => handleSelectNode(node)}
-            >
-              <Background />
-              <MiniMap />
-              <Controls />
-            </ReactFlow>
-          </div>
-          <div className="w-80 border-l border-slate-800 p-3 bg-slate-900/60 flex flex-col">
-            <div className="text-xs font-semibold text-slate-300 mb-2">
-              Node configuration
-            </div>
-            {selectedNode ? (
-              <>
-                <div className="text-xs text-slate-400 mb-1">
-                  {selectedNode.data.type} ({selectedNode.id})
-                </div>
-                <textarea
-                  className="flex-1 text-xs bg-slate-950/60 border border-slate-800 rounded-md p-2 font-mono text-slate-100 resize-none"
-                  value={configText}
-                  onChange={(e) => setConfigText(e.target.value)}
-                />
-                <button
-                  className="mt-2 px-2 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800"
-                  onClick={handleConfigApply}
-                >
-                  Apply config
-                </button>
-              </>
-            ) : (
-              <div className="text-xs text-slate-500">
-                Select a node to edit configuration.
-              </div>
-            )}
+      )}
+      {embedded && (
+        <div className="px-4 py-2 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
+          <span className="text-xs text-slate-400">Drag nodes, connect them, edit configs and save.</span>
+          <div className="flex items-center gap-2">
+            {saveError && <span className="text-xs text-red-400 max-w-xs truncate">{saveError}</span>}
+            {saveSuccess && !saveError && <span className="text-xs text-emerald-300">Saved</span>}
+            <button className="px-3 py-1.5 text-xs rounded-md bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </button>
           </div>
         </div>
+      )}
+      <div className="flex-1 flex min-h-0">
+        <div className="w-52 border-r border-slate-800 p-3 space-y-2 bg-slate-900/60 overflow-y-auto">
+          <div className="text-xs font-semibold text-slate-300 mb-1">
+            Nodes
+          </div>
+          {paletteNodes.map((type) => (
+            <button
+              key={type}
+              className="w-full text-left text-xs px-2 py-1.5 rounded-md border border-slate-700 hover:bg-slate-800 transition-colors"
+              onClick={() => handleAddNode(type)}
+            >
+              {nodeTypeLabels[type] ?? type}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 relative">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            fitView
+            onNodeClick={(_, node) => handleSelectNode(node)}
+          >
+            <Background />
+            <MiniMap />
+            <Controls />
+          </ReactFlow>
+        </div>
+        <div className="w-80 border-l border-slate-800 p-3 bg-slate-900/60 flex flex-col overflow-y-auto">
+          <div className="text-xs font-semibold text-slate-300 mb-2">
+            Node configuration
+          </div>
+          {selectedNode ? (
+            <>
+              <div className="text-xs text-slate-400 mb-1">
+                {selectedNode.data.type} ({selectedNode.id})
+              </div>
+              <textarea
+                className="flex-1 text-xs bg-slate-950/60 border border-slate-800 rounded-md p-2 font-mono text-slate-100 resize-none min-h-[120px]"
+                value={configText}
+                onChange={(e) => setConfigText(e.target.value)}
+              />
+              <button
+                className="mt-2 px-2 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800 transition-colors"
+                onClick={handleConfigApply}
+              >
+                Apply config
+              </button>
+            </>
+          ) : (
+            <div className="text-xs text-slate-500">
+              Select a node to edit configuration.
+            </div>
+          )}
+        </div>
       </div>
+    </div>
+  );
+
+  if (embedded) return editorContent;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center">
+      {editorContent}
     </div>
   );
 };

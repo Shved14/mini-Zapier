@@ -134,11 +134,50 @@ export async function updateWorkflow(id: string, userId: string, data: { name?: 
   });
 }
 
+export async function getWorkflowById(id: string, userId: string) {
+  const workflow = await prisma.workflow.findUnique({
+    where: { id },
+    include: { members: true },
+  });
+
+  if (!workflow) throw new AppError(404, "Workflow not found");
+
+  const isOwner = workflow.userId === userId;
+  const isMember = workflow.members.some(
+    (m) => m.userId === userId && m.status === "accepted"
+  );
+
+  if (!isOwner && !isMember) throw new AppError(403, "Access denied");
+
+  return workflow;
+}
+
 export async function getWorkflowsByUser(userId: string) {
-  return prisma.workflow.findMany({
+  const owned = await prisma.workflow.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
   });
+
+  const memberOf = await prisma.workflow.findMany({
+    where: {
+      members: {
+        some: { userId, status: "accepted" },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const ids = new Set(owned.map((w) => w.id));
+  const combined = [...owned, ...memberOf.filter((w) => !ids.has(w.id))];
+  return combined;
+}
+
+export async function updateWorkflowStatus(id: string, userId: string, status: string) {
+  const workflow = await prisma.workflow.findUnique({ where: { id } });
+  if (!workflow) throw new AppError(404, "Workflow not found");
+  if (workflow.userId !== userId) throw new AppError(403, "Only the owner can change status");
+
+  return prisma.workflow.update({ where: { id }, data: { status } });
 }
 
 export async function deleteWorkflow(id: string, userId: string) {

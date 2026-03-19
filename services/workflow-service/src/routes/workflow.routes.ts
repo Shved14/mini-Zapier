@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
-import { create, update, getAll, remove } from "../controllers/workflow.controller";
+import { create, update, getAll, getById, patchStatus, listLogs, remove } from "../controllers/workflow.controller";
+import { listMembers, invite, accept, decline, remove as removeMember } from "../controllers/member.controller";
 import { authenticate } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 
@@ -21,9 +22,22 @@ const updateWorkflowSchema = z.object({
 
 const router = Router();
 
+// Core workflow CRUD
 router.post("/", authenticate, validate(createWorkflowSchema), create);
 router.get("/", authenticate, getAll);
+router.get("/:id", authenticate, getById);
 router.put("/:id", authenticate, validate(updateWorkflowSchema), update);
+router.patch("/:id/status", authenticate, patchStatus);
 router.delete("/:id", authenticate, remove);
+
+// Activity logs
+router.get("/:id/logs", authenticate, listLogs);
+
+// Members
+router.get("/:id/members", authenticate, listMembers);
+router.post("/:id/invite", authenticate, invite);
+router.post("/:id/invite/:inviteId/accept", authenticate, accept);
+router.post("/:id/invite/:inviteId/decline", authenticate, decline);
+router.delete("/:id/members/:userId", authenticate, removeMember);
 
 export default router;

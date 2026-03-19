@@ -12,8 +12,45 @@ model Workflow {
   userId       String
   name         String
   workflowJson Json
+  status       String   @default("active")
+  slackWebhook String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  members      WorkflowMember[]
+  activityLogs ActivityLog[]
 
   @@index([userId])
   @@map("workflows")
+}
+
+model WorkflowMember {
+  id         String   @id @default(cuid())
+  workflowId String
+  userId     String
+  role       String   @default("viewer")
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, userId])
+  @@index([userId])
+  @@index([workflowId])
+  @@map("workflow_members")
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  workflowId String
+  userId     String
+  action     String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([userId])
+  @@map("activity_logs")
 }

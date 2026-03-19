@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { WorkflowsPage } from "./pages/WorkflowsPage";
+import { WorkflowDetailPage } from "./pages/WorkflowDetailPage";
 import { RunsPage } from "./pages/RunsPage";
 import { RunDetailsPage } from "./pages/RunDetailsPage";
 import { StatsPage } from "./pages/StatsPage";
@@ -15,7 +16,8 @@ const ProtectedRoutes: React.FC = () => {
   const location = useLocation();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
-  const currentPage = location.pathname.replace("/", "") || "workflows";
+  const pathSegments = location.pathname.split("/").filter(Boolean);
+  const currentPage = pathSegments[0] || "workflows";
 
   useEffect(() => {
     if (!token) {
@@ -49,6 +51,7 @@ const ProtectedRoutes: React.FC = () => {
     >
       <Routes>
         <Route path="/workflows" element={<WorkflowsPage />} />
+        <Route path="/workflows/:id" element={<WorkflowDetailPage />} />
         <Route
           path="/runs"
           element={

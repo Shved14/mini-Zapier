@@ -65,5 +65,52 @@ export async function getByUser(userId: string) {
   return prisma.notification.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+}
+
+export async function getUnreadCount(userId: string) {
+  return prisma.notification.count({
+    where: { userId, read: false },
+  });
+}
+
+export async function markRead(id: string, userId: string) {
+  const notification = await prisma.notification.findUnique({ where: { id } });
+  if (!notification || notification.userId !== userId) {
+    throw new AppError(404, "Notification not found");
+  }
+  return prisma.notification.update({
+    where: { id },
+    data: { read: true },
+  });
+}
+
+export async function markAllRead(userId: string) {
+  await prisma.notification.updateMany({
+    where: { userId, read: false },
+    data: { read: true },
+  });
+  return { message: "All notifications marked as read" };
+}
+
+export async function createInApp(input: {
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  relatedId?: string;
+}) {
+  return prisma.notification.create({
+    data: {
+      userId: input.userId,
+      type: input.type,
+      channel: "in_app",
+      title: input.title,
+      message: input.message,
+      relatedId: input.relatedId,
+      status: "sent",
+      sentAt: new Date(),
+    },
   });
 }

@@ -1,13 +1,27 @@
 import { api } from "./client";
 
+export type WorkflowMemberRef = {
+  id: string;
+  workflowId: string;
+  userId: string;
+  role: string;
+  status: string;
+  createdAt: string;
+};
+
 export type Workflow = {
   id: string;
   name: string;
-  isActive: boolean;
-  triggerType: string;
-  triggerConfig: Record<string, unknown>;
+  userId: string;
+  status: string;
+  isActive?: boolean;
+  triggerType?: string;
+  triggerConfig?: Record<string, unknown>;
   workflowJson?: unknown;
+  slackWebhook?: string | null;
+  members?: WorkflowMemberRef[];
   createdAt: string;
+  updatedAt?: string;
 };
 
 export const workflowsApi = {
@@ -35,6 +49,11 @@ export const workflowsApi = {
 
   async update(id: string, payload: Partial<Workflow>) {
     const res = await api.put<Workflow>(`/workflows/${id}`, payload);
+    return res.data;
+  },
+
+  async patchStatus(id: string, status: string) {
+    const res = await api.patch<Workflow>(`/workflows/${id}/status`, { status });
     return res.data;
   },
 
