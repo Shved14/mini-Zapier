@@ -5,19 +5,21 @@ type LayoutProps = {
   currentPage: string;
   onChangePage: (page: string) => void;
   children: React.ReactNode;
+  onBackToLanding?: () => void;
 };
 
 const navItems = [
   { id: "workflows", label: "Workflows" },
   { id: "runs", label: "Runs" },
   { id: "stats", label: "Statistics" },
-   { id: "profile", label: "Profile" },
+  { id: "profile", label: "Profile" },
 ];
 
 export const Layout: React.FC<LayoutProps> = ({
   currentPage,
   onChangePage,
   children,
+  onBackToLanding,
 }) => {
   const { theme, toggleTheme } = useThemeStore();
 
@@ -35,9 +37,12 @@ export const Layout: React.FC<LayoutProps> = ({
     <div className="min-h-screen flex bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-50">
       <aside className="w-64 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-          <h1 className="text-xl font-semibold text-primary-600 dark:text-primary-400">
+          <button
+            onClick={onBackToLanding}
+            className="text-xl font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+          >
             Mini Zapier
-          </h1>
+          </button>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Workflow automation dashboard
           </p>
@@ -46,11 +51,10 @@ export const Layout: React.FC<LayoutProps> = ({
           {navItems.map((item) => (
             <button
               key={item.id}
-              className={`w-full text-left px-3 py-2 rounded-md text-sm transition ${
-                currentPage === item.id
-                  ? "bg-primary-600 text-white"
-                  : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-              }`}
+              className={`w-full text-left px-3 py-2 rounded-md text-sm transition ${currentPage === item.id
+                ? "bg-primary-600 text-white"
+                : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                }`}
               onClick={() => onChangePage(item.id)}
             >
               {item.label}

@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { AuthModal } from "../components/AuthModal";
 
 type LandingPageProps = {
   onGetStarted?: () => void;
   onViewDocs?: () => void;
+  onAuthSuccess?: () => void;
 };
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -11,6 +13,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onViewDocs,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
 
   return (
     <div className="min-h-screen bg-gradient-dark text-white relative overflow-hidden">
@@ -68,27 +72,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onGetStarted}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                className={`px-8 py-3 text-base font-medium rounded-full bg-gradient-to-r ${isHovered
-                    ? 'from-purple-600 to-pink-600'
-                    : 'from-purple-500 to-pink-500'
-                  } text-white shadow-xl hover:shadow-2xl transition-all duration-300 neon-border`}
-              >
-                Start building workflows
-              </motion.button>
 
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={onViewDocs}
+                onClick={() => {
+                  setAuthMode("signin");
+                  setAuthModalOpen(true);
+                }}
                 className="px-8 py-3 text-base font-medium rounded-full glass border border-white/20 hover:bg-white/10 text-white/90 backdrop-blur-md transition-all duration-300"
               >
-                View documentation
+                Sign in
               </motion.button>
             </motion.div>
           </motion.header>
@@ -262,18 +256,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <p className="text-gray-200 mb-8 text-lg">
                 Start with a webhook trigger, connect an HTTP step and send yourself a Telegram notification.
               </p>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onGetStarted}
-                className="px-8 py-3 text-lg font-semibold rounded-full glass border border-white/20 hover:bg-white/10 text-white transition-all duration-300"
-              >
-                Open dashboard
-              </motion.button>
             </div>
           </motion.section>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        mode={authMode}
+        onModeChange={setAuthMode}
+        onSuccess={() => {
+          setAuthModalOpen(false);
+          onAuthSuccess?.();
+        }}
+      />
     </div>
   );
 };
@@ -289,4 +287,3 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ title, description }) => (
     <p className="text-gray-300">{description}</p>
   </div>
 );
-

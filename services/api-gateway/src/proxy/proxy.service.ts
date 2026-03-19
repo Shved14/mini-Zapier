@@ -3,13 +3,14 @@ import { HttpService } from '@nestjs/axios';
 import { Request, Response } from 'express';
 import { ConfigService } from '../config/config.service';
 import { firstValueFrom } from 'rxjs';
+import { AxiosResponse } from 'axios';
 
 @Injectable()
 export class ProxyService {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async proxyRequest(req: Request, res: Response, serviceName: string, headers: any) {
     try {
@@ -19,16 +20,16 @@ export class ProxyService {
       }
 
       const targetUrl = `${serviceUrl}${req.originalUrl}`;
-      
+
       // Remove host header to avoid conflicts
       const { host, ...forwardHeaders } = headers;
-      
+
       // Add authorization header if present
       if (req.headers.authorization) {
         forwardHeaders.authorization = req.headers.authorization;
       }
 
-      const response = await firstValueFrom(
+      const response: AxiosResponse = await firstValueFrom(
         this.httpService.request({
           method: req.method,
           url: targetUrl,
@@ -39,7 +40,7 @@ export class ProxyService {
       );
 
       return res.status(response.status).json(response.data);
-    } catch (error) {
+    } catch (error: any) {
       if (error.response) {
         return res.status(error.response.status).json(error.response.data);
       }

@@ -126,8 +126,8 @@ export const WorkflowsPage: React.FC = () => {
                     </div>
                   </div>
                   <div className={`px-3 py-1 rounded-full text-xs font-medium ${workflow.isActive
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
                     }`}>
                     {workflow.isActive ? 'Active' : 'Inactive'}
                   </div>
@@ -214,15 +214,6 @@ export const WorkflowsPage: React.FC = () => {
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">No workflows yet</h3>
           <p className="text-gray-400 mb-6">Create your first workflow to get started</p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={createNewWorkflow}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300 neon-border"
-          >
-            <Plus className="h-5 w-5" />
-            Create workflow
-          </motion.button>
         </motion.div>
       )}
 

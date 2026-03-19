@@ -21,7 +21,22 @@
     "docker:logs": "docker-compose -f infrastructure/docker-compose.yml logs -f",
     "setup": "npm install && npm run setup:services && npm run setup:frontend",
     "setup:services": "cd services/api-gateway && npm install && cd ../auth-service && npm install && cd ../workflow-service && npm install && cd ../execution-service && npm install && cd ../trigger-service && npm install && cd ../action-service && npm install && cd ../notification-service && npm install",
-    "setup:frontend": "cd frontend && npm install"
+    "setup:frontend": "cd frontend && npm install",
+    "dev:start": "start-dev.bat",
+    "dev:stop": "docker-compose -f docker-compose.dev.yml down",
+    "dev:restart": "docker-compose -f docker-compose.dev.yml restart",
+    "dev:logs": "docker-compose -f docker-compose.dev.yml logs -f",
+    "dev:clean": "docker-compose -f docker-compose.dev.yml down -v && docker system prune -f",
+    "prod:deploy": "./deploy.sh",
+    "prod:setup": "./setup-production.sh",
+    "test": "npm run test:services && npm run test:frontend",
+    "test:services": "cd services/api-gateway && npm test && cd ../auth-service && npm test && cd ../workflow-service && npm test && cd ../execution-service && npm test && cd ../trigger-service && npm test && cd ../action-service && npm test && cd ../notification-service && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "lint": "npm run lint:services && npm run lint:frontend",
+    "lint:services": "cd services/api-gateway && npm run lint && cd ../auth-service && npm run lint && cd ../workflow-service && npm run lint && cd ../execution-service && npm run lint && cd ../trigger-service && npm run lint && cd ../action-service && npm run lint && cd ../notification-service && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "migrate": "./infrastructure/migrations/run-migrations.sh",
+    "seed": "./infrastructure/seeds/seed-data.sh"
   },
   "keywords": [
     "workflow",

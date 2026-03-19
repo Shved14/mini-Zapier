@@ -8,50 +8,12 @@ datasource db {
 }
 
 model Workflow {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  userId      String
-  status      WorkflowStatus @default(DRAFT)
-  trigger     Json     // Trigger configuration
-  nodes       Json     // Workflow nodes array
-  edges       Json     // Workflow edges array
-  settings    Json?    // Additional workflow settings
-  isActive    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  workflowJson Json
+  createdAt    DateTime @default(now())
 
-  executions  WorkflowExecution[]
-
+  @@index([userId])
   @@map("workflows")
-}
-
-model WorkflowExecution {
-  id          String   @id @default(cuid())
-  workflowId  String
-  status      ExecutionStatus @default(PENDING)
-  startedAt   DateTime @default(now())
-  completedAt DateTime?
-  error       String?
-  logs        Json?
-  metadata    Json?    // Additional execution metadata
-
-  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-
-  @@map("workflow_executions")
-}
-
-enum WorkflowStatus {
-  DRAFT
-  ACTIVE
-  PAUSED
-  ARCHIVED
-}
-
-enum ExecutionStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
-  CANCELLED
 }

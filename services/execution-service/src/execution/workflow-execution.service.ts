@@ -3,6 +3,7 @@ import { PrismaService } from '../config/prisma.service';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { HttpService } from '@nestjs/axios';
+import { DistributedLockService } from '../common/distributed-lock.service';
 
 export interface WorkflowExecutionOptions {
   workflowId: string;
@@ -25,90 +26,96 @@ export class WorkflowExecutionService {
     private prisma: PrismaService,
     @InjectQueue('workflow-execution') private workflowQueue: Queue,
     private httpService: HttpService,
-  ) {}
+    private distributedLockService: DistributedLockService,
+  ) { }
 
   async executeWorkflow(options: WorkflowExecutionOptions): Promise<ExecutionResult> {
     const { workflowId, triggerData, executionId, userId } = options;
-    
-    try {
-      // Get workflow from Workflow Service
-      const workflow = await this.getWorkflow(workflowId);
-      if (!workflow) {
-        throw new Error('Workflow not found');
-      }
 
-      // Create or get execution
-      let execution;
-      if (executionId) {
-        execution = await this.prisma.execution.findUnique({
-          where: { id: executionId },
-        });
-        if (!execution) {
-          throw new Error('Execution not found');
+    // Use distributed lock to prevent concurrent execution of same workflow
+    const lockKey = `workflow:${workflowId}`;
+
+    return await this.distributedLockService.withLock(lockKey, async () => {
+      try {
+        // Get workflow from Workflow Service
+        const workflow = await this.getWorkflow(workflowId);
+        if (!workflow) {
+          throw new Error('Workflow not found');
         }
-      } else {
-        execution = await this.createExecution(workflowId, userId);
-      }
 
-      // Update execution status to running
-      await this.prisma.execution.update({
-        where: { id: execution.id },
-        data: { status: 'RUNNING' },
-      });
+        // Create or get execution
+        let execution;
+        if (executionId) {
+          execution = await this.prisma.execution.findUnique({
+            where: { id: executionId },
+          });
+          if (!execution) {
+            throw new Error('Execution not found');
+          }
+        } else {
+          execution = await this.createExecution(workflowId, userId);
+        }
 
-      // Log execution start
-      await this.logExecution(execution.id, 'INFO', 'Workflow execution started', {
-        workflowId,
-        triggerData,
-      });
-
-      // Execute workflow nodes in order
-      const result = await this.executeWorkflowNodes(workflow, execution, triggerData);
-
-      // Update execution status
-      const finalStatus = result.success ? 'COMPLETED' : 'FAILED';
-      await this.prisma.execution.update({
-        where: { id: execution.id },
-        data: {
-          status: finalStatus,
-          error: result.error,
-          completedAt: new Date(),
-        },
-      });
-
-      // Log completion
-      await this.logExecution(execution.id, 'INFO', `Workflow execution ${finalStatus.toLowerCase()}`);
-
-      // Send notification if failed
-      if (!result.success) {
-        await this.sendFailureNotification(execution, result.error);
-      }
-
-      return {
-        execution,
-        success: result.success,
-        error: result.error,
-      };
-    } catch (error) {
-      this.logger.error(`Workflow execution failed: ${error.message}`, error.stack);
-      
-      if (executionId) {
+        // Update execution status to running
         await this.prisma.execution.update({
-          where: { id: executionId },
+          where: { id: execution.id },
+          data: { status: 'RUNNING' },
+        });
+
+        // Log execution start
+        await this.logExecution(execution.id, 'INFO', 'Workflow execution started', {
+          workflowId,
+          triggerData,
+        });
+
+        // Execute workflow nodes in order
+        const result = await this.executeWorkflowNodes(workflow, execution, triggerData);
+
+        // Update execution status
+        const finalStatus = result.success ? 'COMPLETED' : 'FAILED';
+        await this.prisma.execution.update({
+          where: { id: execution.id },
           data: {
-            status: 'FAILED',
-            error: error.message,
+            status: finalStatus,
+            error: result.error,
             completedAt: new Date(),
           },
         });
-      }
 
-      return {
-        execution: executionId ? { id: executionId } : null,
-        success: false,
-        error: error.message,
-      };
-    }
+        // Log completion
+        await this.logExecution(execution.id, 'INFO', `Workflow execution ${finalStatus.toLowerCase()}`);
+
+        // Send notification if failed
+        if (!result.success) {
+          await this.sendFailureNotification(execution, result.error);
+        }
+
+        return {
+          execution,
+          success: result.success,
+          error: result.error,
+        };
+      } catch (error) {
+        this.logger.error(`Workflow execution failed: ${error.message}`, error.stack);
+
+        if (executionId) {
+          await this.prisma.execution.update({
+            where: { id: executionId },
+            data: {
+              status: 'FAILED',
+              error: error.message,
+              completedAt: new Date(),
+            },
+          });
+        }
+
+        return {
+          execution: executionId ? { id: executionId } : null,
+          success: false,
+          error: error.message,
+        };
+      }
+    }, 60000); // 60 second lock timeout
   }
 
   private async getWorkflow(workflowId: string): Promise<any> {
@@ -135,7 +142,7 @@ export class WorkflowExecutionService {
 
   private async executeWorkflowNodes(workflow: any, execution: any, triggerData?: any): Promise<{ success: boolean; error?: string }> {
     const { nodes, edges } = workflow;
-    
+
     if (!nodes || nodes.length === 0) {
       return { success: false, error: 'Workflow has no nodes' };
     }
@@ -148,7 +155,7 @@ export class WorkflowExecutionService {
 
     // Build execution graph
     const executionGraph = this.buildExecutionGraph(nodes, edges);
-    
+
     // Execute nodes starting from trigger
     const visitedNodes = new Set<string>();
     const nodeResults = new Map<string, any>();
@@ -174,7 +181,7 @@ export class WorkflowExecutionService {
 
   private buildExecutionGraph(nodes: any[], edges: any[]): Map<string, string[]> {
     const graph = new Map<string, string[]>();
-    
+
     // Initialize all nodes
     nodes.forEach(node => {
       graph.set(node.id, []);
@@ -198,7 +205,7 @@ export class WorkflowExecutionService {
     nodeResults: Map<string, any>
   ): Promise<void> {
     const connectedNodes = graph.get(nodeId) || [];
-    
+
     for (const targetNodeId of connectedNodes) {
       if (!visitedNodes.has(targetNodeId)) {
         const targetNode = this.findNodeById(targetNodeId);
@@ -206,7 +213,7 @@ export class WorkflowExecutionService {
           const input = this.prepareNodeInput(targetNodeId, graph, nodeResults);
           await this.executeNode(targetNode, execution, input, nodeResults);
           visitedNodes.add(targetNodeId);
-          
+
           // Recursively execute connected nodes
           await this.executeConnectedNodes(targetNodeId, graph, execution, visitedNodes, nodeResults);
         }
@@ -232,7 +239,7 @@ export class WorkflowExecutionService {
 
   private async executeNode(node: any, execution: any, input: any, nodeResults: Map<string, any>): Promise<void> {
     const startTime = Date.now();
-    
+
     // Create execution step
     const step = await this.prisma.executionStep.create({
       data: {
@@ -250,7 +257,7 @@ export class WorkflowExecutionService {
 
     try {
       let output;
-      
+
       // Execute based on node type
       switch (node.nodeType) {
         case 'webhook':
@@ -312,7 +319,7 @@ export class WorkflowExecutionService {
       // Check if we should retry
       if (step.retryCount < step.maxRetries) {
         await this.logStep(step.id, 'INFO', `Scheduling retry attempt ${step.retryCount + 1}/${step.maxRetries}`);
-        
+
         // Schedule retry job
         await this.workflowQueue.add('retry-workflow-step', {
           executionId: execution.id,
@@ -333,7 +340,7 @@ export class WorkflowExecutionService {
 
   private async executeHttpRequestNode(node: any, input: any): Promise<any> {
     const config = node.config;
-    
+
     try {
       const response = await this.httpService.request({
         url: config.url,
@@ -355,7 +362,7 @@ export class WorkflowExecutionService {
 
   private async executeEmailNode(node: any, input: any): Promise<any> {
     const config = node.config;
-    
+
     try {
       // Call Action Service to send email
       const response = await this.httpService.post(
@@ -375,7 +382,7 @@ export class WorkflowExecutionService {
 
   private async executeTelegramNode(node: any, input: any): Promise<any> {
     const config = node.config;
-    
+
     try {
       // Call Action Service to send Telegram message
       const response = await this.httpService.post(
@@ -395,11 +402,11 @@ export class WorkflowExecutionService {
 
   private async executeDataTransformNode(node: any, input: any): Promise<any> {
     const config = node.config;
-    
+
     try {
       // Simple data transformation - in real implementation, this would be more sophisticated
       const transformedData = this.processTemplate(config.transform || {}, input);
-      
+
       return transformedData;
     } catch (error) {
       throw new Error(`Data transformation failed: ${error.message}`);
@@ -420,7 +427,7 @@ export class WorkflowExecutionService {
       }
       return result;
     }
-    
+
     return template;
   }
 
