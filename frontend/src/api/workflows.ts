@@ -22,7 +22,14 @@ export const workflowsApi = {
   },
 
   async create(payload: Partial<Workflow> & { name: string }) {
-    const res = await api.post<Workflow>("/workflows", payload);
+    const data = {
+      ...payload,
+      workflowJson: payload.workflowJson ?? {
+        nodes: [{ id: "trigger-1", type: "trigger", config: {}, position: { x: 250, y: 50 }, data: { label: "Start" } }],
+        edges: [],
+      },
+    };
+    const res = await api.post<Workflow>("/workflows", data);
     return res.data;
   },
 

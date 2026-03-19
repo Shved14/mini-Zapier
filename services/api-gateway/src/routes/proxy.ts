@@ -8,14 +8,14 @@ const EXECUTION_SERVICE_URL = process.env.EXECUTION_SERVICE_URL || "http://local
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:3006";
 const REALTIME_SERVICE_URL = process.env.REALTIME_SERVICE_URL || "http://localhost:3010";
 
-function proxy(target: string, pathRewrite?: Record<string, string>): ReturnType<typeof createProxyMiddleware> {
+function proxy(target: string, pathFilter: string): ReturnType<typeof createProxyMiddleware> {
   const options: Options = {
     target,
     changeOrigin: true,
-    pathRewrite,
+    pathFilter,
     on: {
       proxyReq: (_proxyReq, req) => {
-        console.log(`[proxy] ${req.method} ${req.url} → ${target}`);
+        console.log(`[proxy] ${req.method} ${(req as any).originalUrl || req.url} → ${target}`);
       },
       error: (err, _req, res) => {
         console.error(`[proxy] Error: ${err.message}`);
@@ -32,12 +32,19 @@ function proxy(target: string, pathRewrite?: Record<string, string>): ReturnType
 const router = Router();
 
 // Auth routes — no JWT required (login/register are public)
-router.use("/auth", proxy(AUTH_SERVICE_URL));
+router.use(proxy(AUTH_SERVICE_URL, "/auth/**"));
 
-// Protected routes — JWT required
-router.use("/workflows", validateJwt, proxy(WORKFLOW_SERVICE_URL));
-router.use("/execute", validateJwt, proxy(EXECUTION_SERVICE_URL));
-router.use("/notifications", validateJwt, proxy(NOTIFICATION_SERVICE_URL));
-router.use("/realtime", validateJwt, proxy(REALTIME_SERVICE_URL));
+// Protected routes — JWT required, then proxy
+router.use("/workflows", validateJwt);
+router.use(proxy(WORKFLOW_SERVICE_URL, "/workflows/**"));
+
+router.use("/execute", validateJwt);
+router.use(proxy(EXECUTION_SERVICE_URL, "/execute/**"));
+
+router.use("/notifications", validateJwt);
+router.use(proxy(NOTIFICATION_SERVICE_URL, "/notifications/**"));
+
+router.use("/realtime", validateJwt);
+router.use(proxy(REALTIME_SERVICE_URL, "/realtime/**"));
 
 export default router;

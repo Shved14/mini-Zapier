@@ -22,6 +22,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState("");
 
@@ -36,6 +37,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           setLocalError("Name is required");
           return;
         }
+        if (password.length < 8) {
+          setLocalError("Password must be at least 8 characters");
+          return;
+        }
+        if (password !== confirmPassword) {
+          setLocalError("Passwords do not match");
+          return;
+        }
         await register(email, password, name);
       } else {
         await login(email, password);
@@ -48,7 +57,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   const handleOAuth = (provider: "google" | "github") => {
-    window.location.href = `/auth/${provider}`;
+    window.location.href = `/api/auth/${provider}`;
   };
 
   const displayError = localError || error;
@@ -152,6 +161,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
                     className="w-full pl-10 pr-10 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/20"
                     placeholder="••••••••"
                     required
@@ -165,6 +175,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </button>
                 </div>
               </div>
+
+              {mode === "signup" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      autoComplete="new-password"
+                      className="w-full pl-10 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/20"
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
 
               {displayError && (
                 <div className="flex items-center gap-2 text-red-400 text-xs">

@@ -31,6 +31,10 @@ const ProtectedRoutes: React.FC = () => {
     navigate(`/${page}`);
   };
 
+  const handleLogoClick = () => {
+    navigate("/workflows");
+  };
+
   const handleLogout = () => {
     logout();
     navigate("/", { replace: true });
@@ -40,7 +44,8 @@ const ProtectedRoutes: React.FC = () => {
     <Layout
       currentPage={currentPage}
       onChangePage={handleChangePage}
-      onBackToLanding={handleLogout}
+      onBackToLanding={handleLogoClick}
+      onLogout={handleLogout}
     >
       <Routes>
         <Route path="/workflows" element={<WorkflowsPage />} />
@@ -61,11 +66,29 @@ const ProtectedRoutes: React.FC = () => {
   );
 };
 
+const OAuthTokenHandler: React.FC = () => {
+  const { setToken, fetchUser } = useAuthStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get("token");
+    if (urlToken) {
+      setToken(urlToken);
+      fetchUser();
+      navigate("/workflows", { replace: true });
+    }
+  }, [setToken, fetchUser, navigate]);
+
+  return null;
+};
+
 const App: React.FC = () => {
   const token = useAuthStore((s) => s.token);
 
   return (
     <Router>
+      <OAuthTokenHandler />
       <Routes>
         <Route
           path="/"

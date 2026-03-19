@@ -100,6 +100,21 @@ export async function getMe(userId: string) {
   };
 }
 
+export async function updateUser(userId: string, data: { name?: string }) {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { name: data.name },
+  });
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    provider: user.provider,
+    createdAt: user.createdAt,
+  };
+}
+
 export async function oauthLogin(input: OAuthInput) {
   let user = await prisma.user.findUnique({
     where: { email: input.email },
