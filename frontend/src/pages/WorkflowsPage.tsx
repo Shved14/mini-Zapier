@@ -6,11 +6,12 @@ import { WorkflowEditor } from "../components/WorkflowEditor";
 import { Plus, Play, Edit, Trash2, Zap, Clock, Activity, Settings } from "lucide-react";
 
 export const WorkflowsPage: React.FC = () => {
-  const { workflows, loading, error, fetchWorkflows } = useAppStore();
+  const { workflows, loading, error, fetchWorkflows, createWorkflow, deleteWorkflow: storeDelete, runWorkflow } = useAppStore();
   const [editing, setEditing] = useState<Workflow | null>(null);
   const [editingJson, setEditingJson] = useState<any | undefined>(undefined);
   const [deleting, setDeleting] = useState<Workflow | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWorkflows();
@@ -28,33 +29,33 @@ export const WorkflowsPage: React.FC = () => {
   };
 
   const createNewWorkflow = async () => {
+    setActionError(null);
     try {
-      const newWorkflow = await workflowsApi.create({
-        name: "New workflow",
-        triggerType: "webhook",
-      });
-      await fetchWorkflows();
+      const newWorkflow = await createWorkflow("New workflow");
       openEditor(newWorkflow);
-    } catch (error) {
-      console.error('Failed to create workflow:', error);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to create workflow");
     }
   };
 
-  const runWorkflow = async (workflowId: string) => {
+  const handleRun = async (workflowId: string) => {
+    setActionError(null);
     try {
-      await workflowsApi.run(workflowId);
-    } catch (error) {
-      console.error('Failed to run workflow:', error);
+      await runWorkflow(workflowId);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to run workflow");
     }
   };
 
-  const deleteWorkflow = async (workflow: Workflow) => {
+  const handleDelete = async (workflow: Workflow) => {
     if (!workflow) return;
     setDeletingLoading(true);
+    setActionError(null);
     try {
-      await workflowsApi.remove(workflow.id);
-      await fetchWorkflows();
+      await storeDelete(workflow.id);
       setDeleting(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete workflow");
     } finally {
       setDeletingLoading(false);
     }
@@ -91,13 +92,13 @@ export const WorkflowsPage: React.FC = () => {
       )}
 
       {/* Error State */}
-      {error && (
+      {(error || actionError) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="p-4 rounded-xl bg-red-500/10 border border-red-500/30"
         >
-          <p className="text-red-400">{error}</p>
+          <p className="text-red-400">{error || actionError}</p>
         </motion.div>
       )}
 
@@ -170,7 +171,7 @@ export const WorkflowsPage: React.FC = () => {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => runWorkflow(workflow.id)}
+                    onClick={() => handleRun(workflow.id)}
                     disabled={!workflow.isActive}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                   >
@@ -279,7 +280,7 @@ export const WorkflowsPage: React.FC = () => {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => deleteWorkflow(deleting)}
+                  onClick={() => handleDelete(deleting)}
                   disabled={deletingLoading}
                   className="px-4 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300 disabled:opacity-50"
                 >

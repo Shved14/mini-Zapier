@@ -7,7 +7,22 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 3007,
     proxy: {
-      "/api": {
+      "/auth": {
+        target: "http://127.0.0.1:3000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/workflows": {
+        target: "http://127.0.0.1:3000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/execute": {
+        target: "http://127.0.0.1:3000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/notifications": {
         target: "http://127.0.0.1:3000",
         changeOrigin: true,
         secure: false,

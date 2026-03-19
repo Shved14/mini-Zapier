@@ -1,100 +1,88 @@
-import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { WorkflowsPage } from "./pages/WorkflowsPage";
-import { WorkflowsSimplePage } from "./pages/WorkflowsSimplePage";
 import { RunsPage } from "./pages/RunsPage";
 import { RunDetailsPage } from "./pages/RunDetailsPage";
 import { StatsPage } from "./pages/StatsPage";
 import { LandingPage } from "./pages/LandingPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { useAuthStore } from "./store/useAuthStore";
 
-type Page = "workflows" | "runs" | "stats" | "profile";
+const ProtectedRoutes: React.FC = () => {
+  const { token, logout, fetchUser } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+
+  const currentPage = location.pathname.replace("/", "") || "workflows";
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/", { replace: true });
+      return;
+    }
+    fetchUser();
+  }, [token, navigate, fetchUser]);
+
+  if (!token) return null;
+
+  const handleChangePage = (page: string) => {
+    navigate(`/${page}`);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/", { replace: true });
+  };
+
+  return (
+    <Layout
+      currentPage={currentPage}
+      onChangePage={handleChangePage}
+      onBackToLanding={handleLogout}
+    >
+      <Routes>
+        <Route path="/workflows" element={<WorkflowsPage />} />
+        <Route
+          path="/runs"
+          element={
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <RunsPage onSelectRun={setSelectedRunId} />
+              <RunDetailsPage runId={selectedRunId} />
+            </div>
+          }
+        />
+        <Route path="/stats" element={<StatsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="*" element={<Navigate to="/workflows" replace />} />
+      </Routes>
+    </Layout>
+  );
+};
 
 const App: React.FC = () => {
-  const [page, setPage] = useState<Page>("workflows");
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const [isDark, setIsDark] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const renderContent = () => {
-    if (page === "workflows") {
-      return isLoggedIn ? <WorkflowsSimplePage /> : <WorkflowsPage />;
-    }
-    if (page === "runs") {
-      return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RunsPage onSelectRun={setSelectedRunId} />
-          <RunDetailsPage runId={selectedRunId} />
-        </div>
-      );
-    }
-    if (page === "stats") {
-      return <StatsPage />;
-    }
-    if (page === "profile") {
-      return <ProfilePage />;
-    }
-    return null;
-  };
+  const token = useAuthStore((s) => s.token);
 
   return (
     <Router>
       <Routes>
-        {/* Landing page route */}
         <Route
           path="/"
           element={
-            <div className="min-h-screen bg-gradient-dark text-white">
-              <LandingPage
-                onGetStarted={() => {
-                  setIsLoggedIn(true);
-                }}
-                onViewDocs={() => window.open("http://localhost:4000/docs", "_blank")}
-                onAuthSuccess={() => {
-                  setIsLoggedIn(true);
-                }}
-              />
-            </div>
+            token ? (
+              <Navigate to="/workflows" replace />
+            ) : (
+              <div className="min-h-screen bg-gradient-dark text-white">
+                <LandingPage />
+              </div>
+            )
           }
         />
-
-        {/* Authenticated routes */}
-        <Route
-          path="/*"
-          element={
-            <AnimatePresence mode="wait">
-              <motion.div
-                key="app"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className={`min-h-screen ${isDark ? 'dark' : ''}`}
-              >
-                <Layout
-                  currentPage={page}
-                  onChangePage={(p) => setPage(p as any)}
-                  onBackToLanding={() => setIsLoggedIn(false)}
-                >
-                  <Routes>
-                    <Route path="/workflow" element={renderContent()} />
-                    <Route path="/workflows" element={renderContent()} />
-                    <Route path="/runs" element={renderContent()} />
-                    <Route path="/stats" element={renderContent()} />
-                    <Route path="/profile" element={renderContent()} />
-                    <Route path="*" element={<Navigate to="/workflow" replace />} />
-                  </Routes>
-                </Layout>
-              </motion.div>
-            </AnimatePresence>
-          }
-        />
+        <Route path="/*" element={<ProtectedRoutes />} />
       </Routes>
     </Router>
   );
 };
 
 export default App;
-

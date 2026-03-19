@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { userApi, MeResponse } from "../api/user";
+import { useAuthStore } from "../store/useAuthStore";
+import { userApi } from "../api/user";
 
 export const ProfilePage: React.FC = () => {
-  const [me, setMe] = useState<MeResponse | null>(null);
+  const { user, fetchUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [name, setName] = useState("");
@@ -10,27 +11,22 @@ export const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    setError(undefined);
-    userApi
-      .getMe()
-      .then((data) => {
-        setMe(data);
-        setName(data.name ?? "");
-      })
-      .catch((err) =>
-        setError(
-          err instanceof Error ? err.message : "Failed to load profile"
-        )
-      )
+    fetchUser()
+      .then(() => setName(user?.name ?? ""))
+      .catch(() => setError("Failed to load profile"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [fetchUser]);
+
+  useEffect(() => {
+    if (user?.name) setName(user.name);
+  }, [user]);
 
   const handleSave = async () => {
     setSaving(true);
     setError(undefined);
     try {
-      const updated = await userApi.updateMe({ name });
-      setMe(updated);
+      await userApi.updateMe({ name });
+      await fetchUser();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
@@ -39,14 +35,9 @@ export const ProfilePage: React.FC = () => {
   };
 
   const avatarLetter =
-    me?.name?.[0] ??
-    me?.email?.[0]?.toUpperCase() ??
+    user?.name?.[0] ??
+    user?.email?.[0]?.toUpperCase() ??
     "?";
-
-  const plan = me?.subscription?.plan ?? "FREE";
-  const trialEndsAt = me?.subscription?.trialEndsAt
-    ? new Date(me.subscription.trialEndsAt)
-    : null;
 
   return (
     <div className="max-w-xl space-y-6">
@@ -55,7 +46,7 @@ export const ProfilePage: React.FC = () => {
       {loading && <div className="text-sm text-slate-400">Loading...</div>}
       {error && <div className="text-sm text-red-400">{error}</div>}
 
-      {me && (
+      {user && (
         <>
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-emerald-400 flex items-center justify-center text-lg font-semibold text-slate-50">
@@ -64,7 +55,7 @@ export const ProfilePage: React.FC = () => {
             <div>
               <div className="text-xs text-slate-400">User ID</div>
               <div className="text-xs font-mono text-slate-200">
-                {me.id}
+                {user.id}
               </div>
             </div>
           </div>
@@ -75,7 +66,7 @@ export const ProfilePage: React.FC = () => {
                 Email
               </label>
               <div className="text-sm text-slate-200 bg-slate-900/60 border border-slate-800 rounded-md px-3 py-2">
-                {me.email}
+                {user.email}
               </div>
             </div>
             <div>
@@ -88,30 +79,6 @@ export const ProfilePage: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
               />
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/60 p-4">
-            <div className="text-xs text-slate-400 mb-1">
-              Subscription
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <div>
-                <div className="font-medium text-slate-100">
-                  {plan}
-                </div>
-                <div className="text-xs text-slate-400">
-                  Status: {me.subscription?.status ?? "none"}
-                </div>
-                {trialEndsAt && (
-                  <div className="text-xs text-slate-400">
-                    Trial ends: {trialEndsAt.toLocaleDateString()}
-                  </div>
-                )}
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[11px] bg-primary-500/10 text-primary-300 border border-primary-500/40">
-                {plan === "FREE" ? "Free plan" : "Pro plan"}
-              </span>
             </div>
           </div>
 

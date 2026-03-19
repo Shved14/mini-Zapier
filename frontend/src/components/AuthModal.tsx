@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Mail, Lock, User, Eye, EyeOff, AlertCircle, ArrowLeft, CheckCircle } from "lucide-react";
+import { X, Mail, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { useAuthStore } from "../store/useAuthStore";
 
 type AuthModalProps = {
   isOpen: boolean;
@@ -10,37 +11,6 @@ type AuthModalProps = {
   onSuccess?: () => void;
 };
 
-type AuthStep = "form" | "verification" | "success";
-
-const validatePassword = (password: string): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = [];
-
-  if (password.length < 8) {
-    errors.push("Password must be at least 8 characters long");
-  }
-
-  if (!/[A-Z]/.test(password)) {
-    errors.push("Password must contain at least one uppercase letter");
-  }
-
-  if (!/[a-z]/.test(password)) {
-    errors.push("Password must contain at least one lowercase letter");
-  }
-
-  if (!/\d/.test(password)) {
-    errors.push("Password must contain at least one number");
-  }
-
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-    errors.push("Password must contain at least one special character");
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-};
-
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
@@ -48,166 +18,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onModeChange,
   onSuccess,
 }) => {
-  const [step, setStep] = useState<AuthStep>("form");
+  const { login, register, loading, error, clearError } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
-  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [verificationSent, setVerificationSent] = useState(false);
+  const [localError, setLocalError] = useState("");
 
-  const handlePasswordChange = (value: string) => {
-    setPassword(value);
-    if (mode === "signup") {
-      const validation = validatePassword(value);
-      setPasswordErrors(validation.errors);
-    }
-  };
-
-  const handleSendVerification = async () => {
-    setLoading(true);
-    setErrors([]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLocalError("");
+    clearError();
 
     try {
-      const response = await fetch('/api/auth/send-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      if (response.ok) {
-        setVerificationSent(true);
-        setStep("verification");
-      } else {
-        const errorData = await response.json();
-        setErrors([errorData.message || 'Failed to send verification code']);
-      }
-    } catch (error) {
-      console.error('Send verification error:', error);
-      // Для демонстрации - пропускаем шаг верификации
-      setStep("verification");
-      setVerificationSent(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    setLoading(true);
-    setErrors([]);
-
-    try {
-      const response = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: verificationCode }),
-      });
-
-      if (response.ok) {
-        setStep("success");
-        setTimeout(() => {
-          handleSubmit();
-        }, 1500);
-      } else {
-        const errorData = await response.json();
-        setErrors([errorData.message || 'Invalid verification code']);
-      }
-    } catch (error) {
-      console.error('Verify code error:', error);
-      // Для демонстрации - пропускаем верификацию
-      setStep("success");
-      setTimeout(() => {
-        handleSubmit();
-      }, 1500);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-
-    if (step !== "success") {
-      // Для регистрации сначала отправляем код верификации
       if (mode === "signup") {
-        await handleSendVerification();
-        return;
-      }
-    }
-
-    setLoading(true);
-    setErrors([]);
-
-    try {
-      // Валидация
-      if (mode === "signup") {
-        if (password !== confirmPassword) {
-          setErrors(["Passwords do not match"]);
+        if (!name.trim()) {
+          setLocalError("Name is required");
           return;
         }
-
-        const passwordValidation = validatePassword(password);
-        if (!passwordValidation.isValid) {
-          setPasswordErrors(passwordValidation.errors);
-          return;
-        }
-      }
-
-      // Выбираем правильный эндпоинт
-      const endpoint = mode === "signup" ? '/api/auth/signup' : '/api/auth/signin';
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          name: mode === "signup" ? name : undefined,
-          verificationCode: mode === "signup" ? verificationCode : undefined,
-          mode: mode, // Добавляем mode для правильной обработки на сервере
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('token', data.token);
-        onSuccess?.();
-        onClose();
+        await register(email, password, name);
       } else {
-        const errorData = await response.json();
-        setErrors([errorData.message || 'Authentication failed']);
+        await login(email, password);
       }
-    } catch (error) {
-      console.error('Auth error:', error);
-      // Для демонстрации - симулируем успешный вход
-      setTimeout(() => {
-        localStorage.setItem('token', 'demo-token');
-        onSuccess?.();
-        onClose();
-      }, 1000);
-    } finally {
-      setLoading(false);
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      // Error is already set in the store
     }
   };
 
-  const handleOAuth = (provider: 'google' | 'github') => {
-    setLoading(true);
-
-    // OAuth URL (в реальном приложении это будут реальные URL)
-    const oauthUrls = {
-      google: 'http://localhost:3001/auth/google',
-      github: 'http://localhost:3001/auth/github'
-    };
-
-    window.location.href = oauthUrls[provider];
+  const handleOAuth = (provider: "google" | "github") => {
+    window.location.href = `/auth/${provider}`;
   };
+
+  const displayError = localError || error;
 
   return (
     <AnimatePresence>
@@ -242,7 +86,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {/* Mode Toggle */}
             <div className="flex mb-6 p-1 bg-white/5 rounded-lg">
               <button
-                onClick={() => onModeChange("signin")}
+                onClick={() => { onModeChange("signin"); clearError(); setLocalError(""); }}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === "signin"
                   ? "bg-white text-gray-900"
                   : "text-gray-400 hover:text-white"
@@ -251,7 +95,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 Sign in
               </button>
               <button
-                onClick={() => onModeChange("signup")}
+                onClick={() => { onModeChange("signup"); clearError(); setLocalError(""); }}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === "signup"
                   ? "bg-white text-gray-900"
                   : "text-gray-400 hover:text-white"
@@ -261,213 +105,82 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </button>
             </div>
 
-            {/* Form Step */}
-            {step === "form" && (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === "signup" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Name
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/20"
-                        placeholder="Your name"
-                        required={mode === "signup"}
-                      />
-                    </div>
-                  </div>
-                )}
-
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === "signup" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Email
+                    Name
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       className="w-full pl-10 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/20"
-                      placeholder="your@email.com"
-                      required
+                      placeholder="Your name"
                     />
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => handlePasswordChange(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/20"
-                      placeholder="•••••••••"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {mode === "signup" && passwordErrors.length > 0 && (
-                    <div className="space-y-1">
-                      {passwordErrors.map((error, index) => (
-                        <div key={index} className="flex items-center gap-2 text-red-400 text-xs">
-                          <AlertCircle className="h-3 w-3" />
-                          <span>{error}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {mode === "signup" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Confirm Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full pl-10 pr-10 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/20"
-                        placeholder="•••••••••"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-                      >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {errors.includes("Passwords do not match") && (
-                      <div className="flex items-center gap-2 text-red-400 text-xs">
-                        <AlertCircle className="h-3 w-3" />
-                        <span>Passwords do not match</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {errors.length > 0 && (
-                  <div className="space-y-1">
-                    {errors.map((error, index) => (
-                      <div key={index} className="flex items-center gap-2 text-red-400 text-xs">
-                        <AlertCircle className="h-3 w-3" />
-                        <span>{error}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2 px-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? "Loading..." : mode === "signin" ? "Sign in" : "Sign up"}
-                </button>
-              </form>
-            )}
-
-            {/* Verification Step */}
-            {step === "verification" && (
-              <div className="space-y-4">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Mail className="h-6 w-6 text-purple-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">
-                    Check your email
-                  </h3>
-                  <p className="text-gray-400 text-sm mb-4">
-                    We sent a verification code to {email}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Verification Code
-                  </label>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
-                    type="text"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white text-center text-xl tracking-widest placeholder-gray-400 focus:outline-none focus:border-white/20"
-                    placeholder="000000"
-                    maxLength={6}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/20"
+                    placeholder="your@email.com"
+                    required
                   />
                 </div>
+              </div>
 
-                {errors.length > 0 && (
-                  <div className="space-y-1">
-                    {errors.map((error, index) => (
-                      <div key={index} className="flex items-center gap-2 text-red-400 text-xs">
-                        <AlertCircle className="h-3 w-3" />
-                        <span>{error}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleVerifyCode}
-                  disabled={loading || verificationCode.length !== 6}
-                  className="w-full py-2 px-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? "Verifying..." : "Verify Code"}
-                </button>
-
-                <div className="flex items-center justify-between text-sm">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/20"
+                    placeholder="••••••••"
+                    required
+                  />
                   <button
-                    onClick={() => setStep("form")}
-                    className="text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                   >
-                    <ArrowLeft className="h-3 w-3" />
-                    Back
-                  </button>
-                  <button
-                    onClick={handleSendVerification}
-                    disabled={loading}
-                    className="text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    Resend code
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
-            )}
 
-            {/* Success Step */}
-            {step === "success" && (
-              <div className="text-center py-8">
-                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="h-6 w-6 text-green-400" />
+              {displayError && (
+                <div className="flex items-center gap-2 text-red-400 text-xs">
+                  <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                  <span>{displayError}</span>
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  Email verified!
-                </h3>
-                <p className="text-gray-400 text-sm">
-                  Creating your account...
-                </p>
-              </div>
-            )}
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2 px-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Loading..." : mode === "signin" ? "Sign in" : "Sign up"}
+              </button>
+            </form>
 
             {/* OAuth Options */}
             <div className="mt-6 pt-6 border-t border-white/10">
@@ -477,23 +190,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => handleOAuth('google')}
+                  onClick={() => handleOAuth("google")}
                   disabled={loading}
                   className="w-full py-2 px-4 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M22.56 12.25c0-.78-.09-1.5-.27-2.16-.56l1.24-.56c.65-.29 1.31-.49 2-.56.09.65.27 1.31.49 2.16.56.85.28 1.69.49 2.54.56 1.41-.29 2.78-.49 4.18-.56.85-.28 1.69-.49 2.54-.56.85.28 1.69.49 2.54.56 1.41-.29 2.78-.49 4.18-.56.85-.28 1.69-.49 2.54-.56 1.41-.29 2.78-.49 4.18-.56v-1.28c-1.41-.29-2.78-.49-4.18-.56-.85-.28-1.69-.49-2.54-.56-.85-.28-1.69-.49-2.54-.56-1.41-.29-2.78-.49-4.18-.56-.85-.28-1.69-.49-2.54-.56-.85-.28-1.69-.49-2.54-.56-1.41-.29-2.78-.49-4.18-.56v1.28z" />
+                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                   </svg>
                   Continue with Google
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleOAuth('github')}
+                  onClick={() => handleOAuth("github")}
                   disabled={loading}
                   className="w-full py-2 px-4 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 3.611.231 6.8 4.741 4.741 4.741 0 0-3.19-1.53-6.8-4.741C4.443 19.56 2.299 22 12 22z" />
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-.908 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                   </svg>
                   Continue with GitHub
                 </button>

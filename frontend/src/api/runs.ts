@@ -1,4 +1,4 @@
-import { api, PaginatedResponse } from "./client";
+import { api } from "./client";
 
 export type StepLog = {
   id: string;
@@ -29,18 +29,18 @@ export type WorkflowRun = {
 };
 
 export const runsApi = {
-  async list(): Promise<PaginatedResponse<WorkflowRun>> {
-    const res = await api.get<PaginatedResponse<WorkflowRun>>("/api/runs");
+  async list(): Promise<WorkflowRun[]> {
+    const res = await api.get<WorkflowRun[]>("/execute/jobs");
     return res.data;
   },
 
   async get(id: string): Promise<WorkflowRun> {
-    const res = await api.get<WorkflowRun>(`/api/runs/${id}`);
+    const res = await api.get<WorkflowRun>(`/execute/jobs/${id}`);
     return res.data;
   },
 
   async resume(id: string) {
-    const res = await api.post(`/api/runs/${id}/resume`, {});
+    const res = await api.post(`/execute/jobs/${id}/resume`, {});
     return res.data;
   },
 };

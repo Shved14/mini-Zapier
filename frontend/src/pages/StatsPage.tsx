@@ -9,7 +9,8 @@ export const StatsPage: React.FC = () => {
     setLoading(true);
     runsApi
       .list()
-      .then((data) => setRuns(data.items))
+      .then((data) => setRuns(data))
+      .catch(() => setRuns([]))
       .finally(() => setLoading(false));
   }, []);
 

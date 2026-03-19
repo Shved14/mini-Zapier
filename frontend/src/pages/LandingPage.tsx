@@ -1,18 +1,10 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AuthModal } from "../components/AuthModal";
 
-type LandingPageProps = {
-  onGetStarted?: () => void;
-  onViewDocs?: () => void;
-  onAuthSuccess?: () => void;
-};
-
-export const LandingPage: React.FC<LandingPageProps> = ({
-  onGetStarted,
-  onViewDocs,
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
+export const LandingPage: React.FC = () => {
+  const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
 
@@ -269,7 +261,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         onModeChange={setAuthMode}
         onSuccess={() => {
           setAuthModalOpen(false);
-          onAuthSuccess?.();
+          navigate("/workflows");
         }}
       />
     </div>
