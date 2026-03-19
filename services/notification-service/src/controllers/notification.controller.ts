@@ -1,0 +1,35 @@
+import { Request, Response, NextFunction } from "express";
+import { createAndSend, getByUser, AppError } from "../services/notification.service";
+
+export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { userId, type, channel, title, message, recipient } = req.body;
+    const notification = await createAndSend({ userId, type, channel, title, message, recipient });
+    res.status(201).json(notification);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function list(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.query.userId as string;
+    if (!userId) {
+      res.status(400).json({ message: "userId query parameter is required" });
+      return;
+    }
+    const notifications = await getByUser(userId);
+    res.json(notifications);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction): void {
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({ message: err.message });
+    return;
+  }
+  console.error("Unhandled error:", err);
+  res.status(500).json({ message: "Internal server error" });
+}
