@@ -10,12 +10,12 @@ export async function storeVerificationCode(email: string, code: string): Promis
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 минут
 
   // Удаляем старые коды для этого email
-  await prisma.verificationCodes.deleteMany({
+  await prisma.verificationCode.deleteMany({
     where: { email }
   });
 
   // Сохраняем новый код
-  await prisma.verificationCodes.create({
+  await prisma.verificationCode.create({
     data: {
       email,
       code,
@@ -25,7 +25,7 @@ export async function storeVerificationCode(email: string, code: string): Promis
 }
 
 export async function verifyCode(email: string, code: string): Promise<boolean> {
-  const verification = await prisma.verificationCodes.findFirst({
+  const verification = await prisma.verificationCode.findFirst({
     where: {
       email,
       code,
@@ -40,7 +40,7 @@ export async function verifyCode(email: string, code: string): Promise<boolean> 
   }
 
   // Удаляем использованный код
-  await prisma.verificationCodes.delete({
+  await prisma.verificationCode.delete({
     where: { id: verification.id }
   });
 
@@ -48,7 +48,7 @@ export async function verifyCode(email: string, code: string): Promise<boolean> 
 }
 
 export async function cleanupExpiredCodes(): Promise<void> {
-  await prisma.verificationCodes.deleteMany({
+  await prisma.verificationCode.deleteMany({
     where: {
       expiresAt: {
         lt: new Date(),
