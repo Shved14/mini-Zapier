@@ -28,6 +28,9 @@ const ProtectedRoutes: React.FC = () => {
   const pathSegments = location.pathname.split("/").filter(Boolean);
   const currentPage = pathSegments[0] || "workflows";
 
+  // Debug logging
+  console.log("[ProtectedRoutes] Path:", location.pathname, "Segments:", pathSegments, "Current page:", currentPage);
+
   useEffect(() => {
     console.log("[ProtectedRoutes] Auth state:", { token: !!token, user: !!user, loading, initialized, fetchAttempted });
 
