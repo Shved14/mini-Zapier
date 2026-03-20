@@ -8,12 +8,22 @@ export function startWorker(): Worker {
   const worker = new Worker<WorkflowJobData>(
     WORKFLOW_QUEUE_NAME,
     async (job: Job<WorkflowJobData>) => {
-      logger.info(`Processing job ${job.id}`, {
-        workflowId: job.data.workflowId,
-        attempt: job.attemptsMade + 1,
+      const jobData = job.data as WorkflowJobData;
+      console.log(`🚀 You started workflow execution`, {
+        workflowId: jobData.workflowId,
+        jobId: job.id,
+        userId: jobData.userId,
       });
 
       const result = await runWorkflow(job.data);
+
+      // Log each step execution
+      result.logs.forEach((log, index) => {
+        console.log(`✅ Step ${index + 1} completed: ${log.type} (${log.nodeId})`, {
+          status: log.status,
+          duration: log.durationMs,
+        });
+      });
 
       // Store step results in job data so they're accessible even for failed jobs
       await job.updateData({
@@ -70,3 +80,5 @@ export function startWorker(): Worker {
 
   return worker;
 }
+
+startWorker();

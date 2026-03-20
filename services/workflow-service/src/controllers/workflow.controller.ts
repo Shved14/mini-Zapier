@@ -26,6 +26,9 @@ export async function create(
       name,
       workflowJson,
     });
+
+    console.log(`✅ You created workflow "${name}"`);
+
     await logActivity(workflow.id, user.userId, "workflow_created", { name }, user.email);
 
     // Create notification
@@ -117,6 +120,18 @@ export async function update(
     const previousWorkflow = await getWorkflowById(id, user.userId);
 
     const workflow = await updateWorkflow(id, user.userId, { name, workflowJson, slackWebhook });
+
+    // Log workflow update
+    if (previousWorkflow && workflowJson) {
+      const prevJson = typeof previousWorkflow.workflowJson === 'object' ? previousWorkflow.workflowJson as any : {};
+      const newJson = typeof workflowJson === 'object' ? workflowJson : {};
+      const previousNodes = prevJson?.nodes || [];
+      const newNodes = newJson?.nodes || [];
+
+      if (newNodes.length > previousNodes.length) {
+        console.log(`✅ You added ${newNodes.length - previousNodes.length} node(s) to workflow`);
+      }
+    }
 
     // Log specific changes
     if (name && name !== previousWorkflow.name) {
@@ -225,6 +240,8 @@ export async function run(
       res.status(404).json({ message: "Workflow not found" });
       return;
     }
+
+    console.log(`🚀 You started workflow "${workflow.name}" execution`);
 
     // Call execution service
     const EXECUTION_URL = process.env.EXECUTION_SERVICE_URL || "http://execution-service:3003";
