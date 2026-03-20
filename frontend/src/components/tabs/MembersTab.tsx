@@ -60,7 +60,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({ workflowId, ownerId }) =
     setLastInviteLink(null);
     try {
       const result = await membersApi.inviteByEmail(workflowId, inviteEmail.trim(), "editor");
-      const token = (result as any)?.invitation?.id || (result as any)?.invitation?.token || (result as any)?.token;
+      const token = (result as any)?.invitation?.token || (result as any)?.token;
       if (token) {
         setLastInviteLink(`${window.location.origin}/invite/${token}`);
       }
