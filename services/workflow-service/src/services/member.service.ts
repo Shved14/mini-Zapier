@@ -16,9 +16,15 @@ export async function getMembers(workflowId: string, requestUserId: string) {
     orderBy: { createdAt: "asc" },
   });
 
+  const invites = await prisma.invitation.findMany({
+    where: { workflowId, status: "pending" },
+    orderBy: { createdAt: "desc" },
+  });
+
   return {
     ownerId: workflow.userId,
     members,
+    invites,
   };
 }
 

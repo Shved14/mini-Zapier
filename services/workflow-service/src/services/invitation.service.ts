@@ -121,13 +121,29 @@ export async function acceptInvitation(token: string, userId: string) {
     data: { status: "accepted" },
   });
 
+  // Create WorkflowMember record so the user actually has access
+  const existingMember = await prisma.workflowMember.findUnique({
+    where: { workflowId_userId: { workflowId: invitation.workflowId, userId } },
+  });
+
+  if (!existingMember) {
+    await prisma.workflowMember.create({
+      data: {
+        workflowId: invitation.workflowId,
+        userId,
+        role: invitation.role || "editor",
+        status: "accepted",
+      },
+    });
+  }
+
   // Log the activity
   await logActivity(invitation.workflowId, userId, "member_joined", {
     email: invitation.email,
     role: invitation.role,
   });
 
-  return { message: "Invitation accepted" };
+  return { message: "Invitation accepted", workflowId: invitation.workflowId };
 }
 
 export async function declineInvitation(token: string, userId?: string) {

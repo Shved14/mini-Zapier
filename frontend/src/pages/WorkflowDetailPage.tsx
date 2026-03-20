@@ -14,14 +14,14 @@ import { LogsTab } from "../components/LogsTab";
 import { SettingsTab } from "../components/tabs/SettingsTab";
 import { useConfirmDialog } from "../components/ConfirmDialog";
 
-const tabs = [
-  { id: "editor", label: "Editor", icon: FileText },
-  { id: "logs", label: "Logs", icon: Activity },
-  { id: "members", label: "Members", icon: Users },
-  { id: "settings", label: "Settings", icon: Settings },
+const allTabs = [
+  { id: "editor", label: "Editor", icon: FileText, ownerOnly: false },
+  { id: "logs", label: "Logs", icon: Activity, ownerOnly: false },
+  { id: "members", label: "Members", icon: Users, ownerOnly: true },
+  { id: "settings", label: "Settings", icon: Settings, ownerOnly: true },
 ] as const;
 
-type TabId = (typeof tabs)[number]["id"];
+type TabId = (typeof allTabs)[number]["id"];
 
 export const WorkflowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +61,8 @@ export const WorkflowDetailPage: React.FC = () => {
   // Delete confirmation
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const isOwner = workflow ? user?.id === workflow.userId : false;
 
   const fetchWorkflow = useCallback(async () => {
     if (!id) return;
@@ -116,7 +118,7 @@ export const WorkflowDetailPage: React.FC = () => {
   })();
 
   const canEdit = myRole === "owner" || myRole === "editor";
-  const canDelete = myRole === "owner";
+  const canManage = myRole === "owner"; // Only owners can run/pause/delete
 
   const handleRun = async () => {
     if (!workflow) return;
@@ -214,7 +216,7 @@ export const WorkflowDetailPage: React.FC = () => {
 
         {/* Actions — role-based */}
         <div className="flex items-center gap-2 shrink-0">
-          {canEdit && (
+          {canManage && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -224,7 +226,7 @@ export const WorkflowDetailPage: React.FC = () => {
               <Play className="h-4 w-4" /> Run
             </motion.button>
           )}
-          {canEdit && (
+          {canManage && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -234,7 +236,7 @@ export const WorkflowDetailPage: React.FC = () => {
               <Pause className="h-4 w-4" /> {workflow.isActive ? "Pause" : "Resume"}
             </motion.button>
           )}
-          {canDelete && (
+          {canManage && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -249,7 +251,7 @@ export const WorkflowDetailPage: React.FC = () => {
 
       {/* Safe tab switching */}
       <div className="px-6 border-b border-white/10 bg-slate-900/20 flex gap-0 shrink-0">
-        {tabs.map((tab) => {
+        {allTabs.filter(tab => !tab.ownerOnly || isOwner).map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (

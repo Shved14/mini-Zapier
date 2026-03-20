@@ -37,7 +37,7 @@ export const membersApi = {
   },
 
   async acceptInviteByToken(token: string) {
-    const res = await api.post(`/invite/${token}/accept`);
+    const res = await api.post(`/workflows/invite/${token}/accept`);
     return res.data;
   },
 

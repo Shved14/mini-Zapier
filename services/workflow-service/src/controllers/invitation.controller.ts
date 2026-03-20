@@ -25,6 +25,7 @@ export async function invite(req: Request, res: Response, next: NextFunction): P
         id: invitation.id,
         email: invitation.email,
         role: invitation.role,
+        token: invitation.token,
         status: invitation.status,
         createdAt: invitation.createdAt,
       },

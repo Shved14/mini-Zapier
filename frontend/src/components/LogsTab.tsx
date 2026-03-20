@@ -10,6 +10,7 @@ interface ActivityLog {
   metadata: any;
   createdAt: string;
   message: string;
+  user?: { id: string; email: string; name?: string | null };
 }
 
 interface LogsTabProps {
@@ -231,7 +232,7 @@ export const LogsTab: React.FC<LogsTabProps> = ({ workflowId }) => {
               <div className="flex items-center gap-4 text-xs text-gray-400">
                 <span className="flex items-center gap-1">
                   <User className="w-3 h-3" />
-                  User {log.userId.slice(0, 8)}...
+                  {log.user?.email || log.user?.name || log.userId.slice(0, 8) + "..."}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />

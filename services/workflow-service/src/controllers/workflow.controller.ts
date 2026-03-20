@@ -25,7 +25,7 @@ export async function create(
       name,
       workflowJson,
     });
-    await logActivity(workflow.id, user.userId, "workflow_created", { name });
+    await logActivity(workflow.id, user.userId, "workflow_created", { name }, user.email);
     res.status(201).json(workflow);
   } catch (error) {
     next(error);
@@ -57,7 +57,7 @@ export async function patchStatus(
     const { id } = req.params;
     const { status } = req.body;
     const workflow = await updateWorkflowStatus(id, user.userId, status);
-    await logActivity(id, user.userId, "status_changed", { status });
+    await logActivity(id, user.userId, "status_changed", { status }, user.email);
     res.json(workflow);
   } catch (error) {
     next(error);
@@ -72,7 +72,6 @@ export async function listLogs(
   try {
     const { id } = req.params;
     const logs = await getActivityLogs(id);
-    console.log('Controller returning logs:', logs);
     res.json({ logs });
   } catch (error) {
     next(error);
@@ -113,7 +112,7 @@ export async function update(
       await logActivity(id, user.userId, "workflow_renamed", {
         previousName: previousWorkflow.name,
         newName: name
-      });
+      }, user.email);
     }
 
     if (workflowJson && previousWorkflow.workflowJson) {
@@ -129,18 +128,17 @@ export async function update(
       const deletedNodes = prevNodes.filter((p: any) => !currNodes.find((n: any) => n.id === p.id));
 
       for (const node of addedNodes) {
-        console.log('Adding node:', { id: node.id, type: node.type, fullNode: node });
         await logActivity(id, user.userId, "node_added", {
           nodeId: node.id,
           nodeType: node.type || 'node'
-        });
+        }, user.email);
       }
 
       for (const node of deletedNodes) {
         await logActivity(id, user.userId, "node_deleted", {
           nodeId: node.id,
           nodeType: node.type || 'node'
-        });
+        }, user.email);
       }
 
       // Log node config changes
@@ -151,7 +149,7 @@ export async function update(
             nodeId: currNode.id,
             nodeType: currNode.type || 'node',
             configField: 'configuration'
-          });
+          }, user.email);
         }
       }
 
@@ -163,19 +161,19 @@ export async function update(
         await logActivity(id, user.userId, "edge_added", {
           source: edge.source,
           target: edge.target
-        });
+        }, user.email);
       }
 
       for (const edge of deletedEdges) {
         await logActivity(id, user.userId, "edge_deleted", {
           source: edge.source,
           target: edge.target
-        });
+        }, user.email);
       }
     }
 
     if (slackWebhook !== undefined) {
-      await logActivity(id, user.userId, "settings_updated", { slackWebhook: !!slackWebhook });
+      await logActivity(id, user.userId, "settings_updated", { slackWebhook: !!slackWebhook }, user.email);
     }
 
     if ((workflow as any).slackWebhook && workflowJson) {
@@ -199,7 +197,7 @@ export async function run(
     const payload = req.body;
 
     // Log workflow run start
-    await logActivity(id, user.userId, "workflow_run_started", { payload });
+    await logActivity(id, user.userId, "workflow_run_started", { payload }, user.email);
 
     // TODO: Integrate with execution service
     // For now, just return success

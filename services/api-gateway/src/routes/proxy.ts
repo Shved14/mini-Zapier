@@ -42,11 +42,26 @@ function serviceProxy(target: string, prefix: string) {
 
 const router = Router();
 
-// Auth routes — no JWT required (login/register are public)
-router.use("/auth", serviceProxy(AUTH_SERVICE_URL, "/auth"));
+// Auth routes — split between public and protected
+router.use("/auth/login", serviceProxy(AUTH_SERVICE_URL, "/auth/login"));
+router.use("/auth/register", serviceProxy(AUTH_SERVICE_URL, "/auth/register"));
+router.use("/auth/verify-email", serviceProxy(AUTH_SERVICE_URL, "/auth/verify-email"));
+router.use("/auth/google", serviceProxy(AUTH_SERVICE_URL, "/auth/google"));
+router.use("/auth/google/callback", serviceProxy(AUTH_SERVICE_URL, "/auth/google/callback"));
+router.use("/auth/github", serviceProxy(AUTH_SERVICE_URL, "/auth/github"));
+router.use("/auth/github/callback", serviceProxy(AUTH_SERVICE_URL, "/auth/github/callback"));
+
+// Protected auth routes — JWT required
+router.use("/auth/me", validateJwt, serviceProxy(AUTH_SERVICE_URL, "/auth/me"));
 
 // Protected routes — JWT required, then proxy
 router.use("/workflows", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows"));
+
+// Public invite token routes (no JWT required)
+router.use("/workflows/invite/:token", serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token"));
+router.post("/workflows/invite/:token/accept", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/accept"));
+router.post("/workflows/invite/:token/decline", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/decline"));
+
 router.use("/execute", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/execute"));
 router.use("/notifications", validateJwt, serviceProxy(NOTIFICATION_SERVICE_URL, "/notifications"));
 

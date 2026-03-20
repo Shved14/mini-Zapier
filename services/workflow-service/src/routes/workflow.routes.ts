@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { create, update, getAll, getById, patchStatus, listLogs, remove, run } from "../controllers/workflow.controller";
-import { listMembers, invite, accept, decline, remove as removeMember } from "../controllers/member.controller";
+import { listMembers, accept, decline, remove as removeMember } from "../controllers/member.controller";
 import { invite as inviteEmail, getInvitation, acceptInvite, declineInvite, listInvitations } from "../controllers/invitation.controller";
 import { authenticate } from "../middleware/auth";
 import { validate } from "../middleware/validate";
@@ -24,7 +24,7 @@ const updateWorkflowSchema = z.object({
 
 const inviteSchema = z.object({
   email: z.string().email("Valid email is required"),
-  role: z.string().optional().default("member"),
+  role: z.string().optional().default("editor"),
 });
 
 const router = Router();
@@ -43,7 +43,7 @@ router.get("/:id/logs", authenticate, listLogs);
 
 // Members
 router.get("/:id/members", authenticate, listMembers);
-router.post("/:id/invite", authenticate, invite);
+router.post("/:id/invite", authenticate, validate(inviteSchema), inviteEmail);
 router.post("/:id/invite/:inviteId/accept", authenticate, accept);
 router.post("/:id/invite/:inviteId/decline", authenticate, decline);
 router.delete("/:id/members/:userId", authenticate, removeMember);
@@ -51,7 +51,7 @@ router.delete("/:id/members/:userId", authenticate, removeMember);
 // Run workflow
 router.post("/:id/run", authenticate, run);
 
-// Email-based invitations
+// Email-based invitations (aliases)
 router.post("/:id/invite-email", authenticate, validate(inviteSchema), inviteEmail);
 router.get("/:id/invitations", authenticate, listInvitations);
 router.get("/invite/:token", getInvitation);

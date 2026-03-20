@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { userApi } from "../api/user";
 
@@ -9,13 +9,17 @@ export const ProfilePage: React.FC = () => {
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Memoize fetchUser to prevent infinite re-renders
+  const memoizedFetchUser = useCallback(fetchUser, [fetchUser]);
+
   useEffect(() => {
     setLoading(true);
-    fetchUser()
+    setError(undefined);
+    memoizedFetchUser()
       .then(() => setName(user?.name ?? ""))
       .catch(() => setError("Failed to load profile"))
       .finally(() => setLoading(false));
-  }, [fetchUser]);
+  }, [memoizedFetchUser]);
 
   useEffect(() => {
     if (user?.name) setName(user.name);
@@ -26,7 +30,7 @@ export const ProfilePage: React.FC = () => {
     setError(undefined);
     try {
       await userApi.updateMe({ name });
-      await fetchUser();
+      await fetchUser(); // Refresh user data
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
@@ -43,10 +47,10 @@ export const ProfilePage: React.FC = () => {
     <div className="max-w-xl space-y-6">
       <h3 className="text-base font-semibold mb-2">Profile</h3>
 
-      {loading && <div className="text-sm text-slate-400">Loading...</div>}
+      {loading && <div className="text-sm text-slate-400">Loading profile...</div>}
       {error && <div className="text-sm text-red-400">{error}</div>}
 
-      {user && (
+      {user && !loading && (
         <>
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-emerald-400 flex items-center justify-center text-lg font-semibold text-slate-50">
@@ -92,6 +96,12 @@ export const ProfilePage: React.FC = () => {
             </button>
           </div>
         </>
+      )}
+
+      {!user && !loading && (
+        <div className="text-sm text-slate-400">
+          No user data available. Please try refreshing the page.
+        </div>
       )}
     </div>
   );

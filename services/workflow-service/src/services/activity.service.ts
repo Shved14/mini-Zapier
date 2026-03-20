@@ -1,26 +1,21 @@
 import { prisma } from "../utils/prisma";
 
-// Function to get user info from JWT token metadata
-async function getUserInfo(userId: string): Promise<{ email: string; name?: string } | null> {
-  // For now, return a simple placeholder. In a real implementation,
-  // you might cache user info or use a different approach
-  return {
-    email: `user-${userId.slice(0, 8)}@example.com`,
-    name: `User ${userId.slice(0, 8)}`
-  };
-}
-
 export interface ActivityMetadata {
   workflowName?: string;
   nodeName?: string;
   nodeType?: string;
+  nodeId?: string;
   fromNode?: string;
   toNode?: string;
+  source?: string;
+  target?: string;
   config?: Record<string, unknown>;
   previousName?: string;
   newName?: string;
   email?: string;
   role?: string;
+  status?: string;
+  userEmail?: string;
   [key: string]: unknown;
 }
 
@@ -31,25 +26,22 @@ export interface ActivityLogWithUser {
   action: string;
   metadata: ActivityMetadata | null;
   createdAt: Date;
-  user?: {
-    id: string;
-    email: string;
-    name?: string | null;
-  };
 }
 
 export async function logActivity(
   workflowId: string,
   userId: string,
   action: string,
-  metadata?: ActivityMetadata
+  metadata?: ActivityMetadata,
+  userEmail?: string
 ) {
+  const meta = { ...(metadata ?? {}), userEmail: userEmail ?? metadata?.userEmail };
   return prisma.activityLog.create({
     data: {
       workflowId,
       userId,
       action,
-      metadata: metadata as any ?? undefined
+      metadata: meta as any,
     },
   });
 }
@@ -61,107 +53,61 @@ export async function getActivityLogs(workflowId: string, limit: number = 50) {
     take: limit,
   });
 
-  // Add generated messages to each log with user info
-  const logsWithMessages = await Promise.all(
-    logs.map(async (log) => {
-      const userInfo = await getUserInfo(log.userId);
-      const userName = userInfo?.name || userInfo?.email || 'Unknown User';
-      const message = getActivityMessage(log, userName);
-      console.log('Generated message for log:', { logId: log.id, message });
-      return {
-        ...log,
-        message: message,
-        user: userInfo
-      };
-    })
-  );
-
-  console.log('Final logs with messages:', logsWithMessages.map(l => ({ id: l.id, message: l.message })));
-  return logsWithMessages;
+  return logs.map((log) => {
+    const meta = (log.metadata as any) ?? {};
+    return {
+      id: log.id,
+      workflowId: log.workflowId,
+      userId: log.userId,
+      action: log.action,
+      metadata: meta,
+      createdAt: log.createdAt,
+      message: formatMessage(log.action, meta),
+      user: {
+        id: log.userId,
+        email: meta.userEmail || log.userId.slice(0, 8) + "...",
+        name: meta.userEmail || null,
+      },
+    };
+  });
 }
 
-export function getActivityMessage(log: any, userName?: string): string {
-  const userDisplayName = userName || 'A user';
-  const { metadata } = log;
+function formatMessage(action: string, meta: any): string {
+  const user = meta.userEmail || "Someone";
 
-  console.log('getActivityMessage called with:', { action: log.action, metadata, userName });
-
-  switch (log.action) {
-    case 'node_added':
-      const addedNodeType = metadata?.nodeType || 'node';
-      const addedNodeId = metadata?.nodeId || 'unknown';
-      const message = `${userDisplayName} added ${addedNodeType} (${addedNodeId})`;
-      console.log('node_added case message:', message);
-      return message;
-    case 'workflow_created':
-      return `${userDisplayName} created workflow "${metadata?.name || metadata?.workflowName || 'Unknown'}"`;
-
-    case 'workflow_renamed':
-      return `${userDisplayName} renamed workflow from "${metadata?.previousName}" to "${metadata?.newName}"`;
-
-    case 'workflow_deleted':
-      return `${userDisplayName} deleted workflow "${metadata?.workflowName || 'Unknown'}"`;
-
-    case 'workflow_updated':
-      return `${userDisplayName} updated workflow structure`;
-
-    case 'node_added':
-      const nodeType = metadata?.nodeType || 'node';
-      const nodeId = metadata?.nodeId || 'unknown';
-      return `${userDisplayName} added ${nodeType} (${nodeId})`;
-
-    case 'node_deleted':
-      const delNodeType = metadata?.nodeType || 'node';
-      const delNodeId = metadata?.nodeId || 'unknown';
-      return `${userDisplayName} deleted ${delNodeType} (${delNodeId})`;
-
-    case 'node_updated':
-      const updNodeType = metadata?.nodeType || 'node';
-      const updNodeId = metadata?.nodeId || 'unknown';
-      return `${userDisplayName} updated ${updNodeType} (${updNodeId})`;
-
-    case 'node_config_updated':
-      const cfgNodeType = metadata?.nodeType || 'node';
-      const cfgNodeId = metadata?.nodeId || 'unknown';
-      const configField = metadata?.configField || 'configuration';
-      return `${userDisplayName} changed ${configField} of ${cfgNodeType} (${cfgNodeId})`;
-
-    case 'nodes_connected':
-      return `${userDisplayName} connected "${metadata?.fromNode}" → "${metadata?.toNode}"`;
-
-    case 'nodes_disconnected':
-      return `${userDisplayName} disconnected "${metadata?.fromNode}" → "${metadata?.toNode}"`;
-
-    case 'workflow_run_started':
-      return `${userDisplayName} started workflow execution`;
-
-    case 'workflow_run_completed':
-      return `${userDisplayName} completed workflow execution`;
-
-    case 'workflow_run_failed':
-      return `${userDisplayName}'s workflow execution failed`;
-
-    case 'member_invited':
-      return `${userDisplayName} invited ${metadata?.email} as ${metadata?.role}`;
-
-    case 'edge_added':
-      const edgeSource = log.metadata?.source || 'unknown';
-      const edgeTarget = log.metadata?.target || 'unknown';
-      return `${userDisplayName} connected ${edgeSource} to ${edgeTarget}`;
-
-    case 'edge_deleted':
-      const delSource = log.metadata?.source || 'unknown';
-      const delTarget = log.metadata?.target || 'unknown';
-      return `${userDisplayName} disconnected ${delSource} from ${delTarget}`;
-
-    case 'status_changed':
-      return `${userDisplayName} changed status to "${metadata?.status}"`;
-
-    case 'settings_updated':
-      return `${userDisplayName} updated workflow settings`;
-
+  switch (action) {
+    case "workflow_created":
+      return `${user} created workflow "${meta.name || meta.workflowName || ""}"`;
+    case "workflow_renamed":
+      return `${user} renamed workflow from "${meta.previousName}" to "${meta.newName}"`;
+    case "workflow_updated":
+      return `${user} updated workflow`;
+    case "node_added":
+      return `${user} added ${meta.nodeType || "node"} node`;
+    case "node_deleted":
+      return `${user} removed ${meta.nodeType || "node"} node`;
+    case "node_config_updated":
+      return `${user} updated config of ${meta.nodeType || "node"} node`;
+    case "edge_added":
+      return `${user} connected ${meta.source || "?"} → ${meta.target || "?"}`;
+    case "edge_deleted":
+      return `${user} disconnected ${meta.source || "?"} → ${meta.target || "?"}`;
+    case "status_changed":
+      return `${user} changed status to "${meta.status || "?"}"`;
+    case "settings_updated":
+      return `${user} updated workflow settings`;
+    case "workflow_run_started":
+      return `${user} started workflow execution`;
+    case "member_invited":
+      return `${user} invited ${meta.email || "someone"}`;
+    case "member_joined":
+      return `${meta.email || user} joined the workflow`;
+    case "member_left":
+      return `${meta.email || user} left the workflow`;
+    case "invite_accepted":
+      return `${user} accepted the invite`;
     default:
-      return `${userDisplayName} performed action: ${log.action}`;
+      return `${user} performed ${action}`;
   }
 }
 

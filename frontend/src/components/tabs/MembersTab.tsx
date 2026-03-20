@@ -27,11 +27,11 @@ export const MembersTab: React.FC<MembersTabProps> = ({ workflowId, ownerId }) =
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("viewer");
   const [inviteError, setInviteError] = useState("");
   const [inviting, setInviting] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [lastInviteLink, setLastInviteLink] = useState<string | null>(null);
 
   const isOwner = user?.id === ownerId;
 
@@ -57,10 +57,14 @@ export const MembersTab: React.FC<MembersTabProps> = ({ workflowId, ownerId }) =
     if (!inviteEmail.trim()) { setInviteError("Email is required"); return; }
     setInviting(true);
     setInviteError("");
+    setLastInviteLink(null);
     try {
-      await membersApi.inviteByEmail(workflowId, inviteEmail.trim(), inviteRole);
+      const result = await membersApi.inviteByEmail(workflowId, inviteEmail.trim(), "editor");
+      const token = (result as any)?.invitation?.id || (result as any)?.invitation?.token || (result as any)?.token;
+      if (token) {
+        setLastInviteLink(`${window.location.origin}/invite/${token}`);
+      }
       setInviteEmail("");
-      setShowInvite(false);
       fetchMembers();
     } catch (err: any) {
       setInviteError(err.response?.data?.message || "Failed to invite");
@@ -143,18 +147,32 @@ export const MembersTab: React.FC<MembersTabProps> = ({ workflowId, ownerId }) =
               />
             </div>
           </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Role</label>
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value)}
-              className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
-            >
-              <option value="viewer">Viewer (read-only)</option>
-              <option value="editor">Editor (can edit nodes)</option>
-            </select>
+          <div className="text-xs text-gray-400">
+            Role: <span className="text-blue-300 font-medium">Editor</span> — can edit nodes, view logs, and run workflows
           </div>
           {inviteError && <p className="text-xs text-red-400">{inviteError}</p>}
+          {lastInviteLink && (
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <p className="text-xs text-emerald-300 mb-1">Invitation sent! Share this link:</p>
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={lastInviteLink}
+                  className="flex-1 text-xs bg-black/30 border border-white/10 rounded px-2 py-1.5 text-white font-mono"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(lastInviteLink);
+                    setCopiedToken("link");
+                    setTimeout(() => setCopiedToken(null), 2000);
+                  }}
+                  className="px-2.5 py-1.5 text-xs rounded bg-white/10 hover:bg-white/20 text-white transition-all"
+                >
+                  {copiedToken === "link" ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={handleInvite}
@@ -164,7 +182,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({ workflowId, ownerId }) =
               {inviting ? "Sending..." : "Send invite"}
             </button>
             <button
-              onClick={() => { setShowInvite(false); setInviteError(""); }}
+              onClick={() => { setShowInvite(false); setInviteError(""); setLastInviteLink(null); }}
               className="px-4 py-2 text-sm rounded-lg border border-white/10 hover:bg-white/5 text-gray-400 transition-all"
             >
               Cancel
@@ -182,8 +200,8 @@ export const MembersTab: React.FC<MembersTabProps> = ({ workflowId, ownerId }) =
           return (
             <div key={m.id} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition-colors group">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${m.role === "owner" ? "bg-gradient-to-br from-amber-500 to-orange-400" :
-                  m.role === "editor" ? "bg-gradient-to-br from-blue-500 to-cyan-400" :
-                    "bg-gradient-to-br from-gray-500 to-gray-400"
+                m.role === "editor" ? "bg-gradient-to-br from-blue-500 to-cyan-400" :
+                  "bg-gradient-to-br from-gray-500 to-gray-400"
                 }`}>
                 {(m.user?.name?.[0] || m.user?.email?.[0] || m.role[0]).toUpperCase()}
               </div>
