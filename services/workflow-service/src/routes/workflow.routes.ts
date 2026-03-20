@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
-import { create, update, getAll, getById, patchStatus, listLogs, remove } from "../controllers/workflow.controller";
+import { create, update, getAll, getById, patchStatus, listLogs, remove, run } from "../controllers/workflow.controller";
 import { listMembers, invite, accept, decline, remove as removeMember } from "../controllers/member.controller";
+import { invite as inviteEmail, getInvitation, acceptInvite, declineInvite, listInvitations } from "../controllers/invitation.controller";
 import { authenticate } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 
 const workflowJsonSchema = z.object({
-  nodes: z.array(z.any()).min(1, "At least one node is required"),
+  nodes: z.array(z.any()).min(0, "Nodes must be an array"),
   edges: z.array(z.any()),
 });
 
@@ -19,6 +20,11 @@ const updateWorkflowSchema = z.object({
   name: z.string().min(1, "Name is required").max(255).optional(),
   workflowJson: workflowJsonSchema.optional(),
   slackWebhook: z.string().optional(),
+});
+
+const inviteSchema = z.object({
+  email: z.string().email("Valid email is required"),
+  role: z.string().optional().default("member"),
 });
 
 const router = Router();
@@ -41,5 +47,15 @@ router.post("/:id/invite", authenticate, invite);
 router.post("/:id/invite/:inviteId/accept", authenticate, accept);
 router.post("/:id/invite/:inviteId/decline", authenticate, decline);
 router.delete("/:id/members/:userId", authenticate, removeMember);
+
+// Run workflow
+router.post("/:id/run", authenticate, run);
+
+// Email-based invitations
+router.post("/:id/invite-email", authenticate, validate(inviteSchema), inviteEmail);
+router.get("/:id/invitations", authenticate, listInvitations);
+router.get("/invite/:token", getInvitation);
+router.post("/invite/:token/accept", authenticate, acceptInvite);
+router.post("/invite/:token/decline", authenticate, declineInvite);
 
 export default router;

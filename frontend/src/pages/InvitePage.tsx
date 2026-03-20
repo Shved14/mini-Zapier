@@ -2,16 +2,16 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, X, Mail, Users, Zap, AlertCircle } from "lucide-react";
-import { useAuthStore } from "../store/useAuthStore";
+import { workflowsApi } from "../api/workflows";
 
-export const InviteAcceptPage: React.FC = () => {
+export const InvitePage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { token: authToken, user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<any>(null);
   const [action, setAction] = useState<"accept" | "decline" | null>(null);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     if (!token) {
@@ -39,7 +39,7 @@ export const InviteAcceptPage: React.FC = () => {
   };
 
   const handleAction = async (actionType: "accept" | "decline") => {
-    if (!token || !authToken) return;
+    if (!token || !user) return;
 
     setAction(actionType);
     try {
@@ -47,7 +47,7 @@ export const InviteAcceptPage: React.FC = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
+          Authorization: `Bearer ${user.token}`,
         },
       });
 
@@ -56,7 +56,7 @@ export const InviteAcceptPage: React.FC = () => {
       }
 
       const data = await response.json();
-
+      
       if (actionType === "accept") {
         // Redirect to workflow
         navigate(`/workflows/${invitation.workflow.id}`);
@@ -102,7 +102,7 @@ export const InviteAcceptPage: React.FC = () => {
     );
   }
 
-  if (!authToken) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <motion.div
@@ -141,9 +141,9 @@ export const InviteAcceptPage: React.FC = () => {
         <div className="w-16 h-16 bg-purple-500/20 border border-purple-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
           <Users className="w-8 h-8 text-purple-400" />
         </div>
-
+        
         <h1 className="text-2xl font-bold text-white mb-2">You're Invited!</h1>
-
+        
         <div className="bg-slate-900 border border-white/10 rounded-lg p-4 mb-6">
           <p className="text-gray-300 mb-2">
             You've been invited to join the workflow:
@@ -174,7 +174,7 @@ export const InviteAcceptPage: React.FC = () => {
             <Check className="w-4 h-4" />
             {action === "accept" ? "Accepting..." : "Accept"}
           </motion.button>
-
+          
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

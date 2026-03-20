@@ -184,6 +184,22 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     }
   };
 
+  // Auto-save function with debouncing
+  const autoSave = useCallback(() => {
+    if (nodes.length > 0) { // Only auto-save if there are nodes
+      handleSave();
+    }
+  }, [nodes, edges, workflow.id]);
+
+  // Auto-save after changes with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      autoSave();
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timer);
+  }, [autoSave]);
+
   const editorContent = (
     <div className={embedded ? "flex flex-col h-full" : "bg-slate-950 border border-slate-800 rounded-xl w-[95vw] h-[90vh] flex flex-col shadow-xl"}>
       {!embedded && (

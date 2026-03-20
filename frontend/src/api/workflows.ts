@@ -65,5 +65,10 @@ export const workflowsApi = {
     const res = await api.post(`/workflows/${id}/run`, payload ?? {});
     return res.data;
   },
+
+  async getLogs(id: string) {
+    const res = await api.get(`/workflows/${id}/logs`);
+    return res.data;
+  },
 };
 

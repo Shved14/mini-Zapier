@@ -8,7 +8,7 @@ import {
 import { workflowsApi, Workflow } from "../api/workflows";
 import { WorkflowEditor } from "../components/WorkflowEditor";
 import { MembersTab } from "../components/tabs/MembersTab";
-import { LogsTab } from "../components/tabs/LogsTab";
+import { LogsTab } from "../components/LogsTab";
 import { SettingsTab } from "../components/tabs/SettingsTab";
 import { useAuthStore } from "../store/useAuthStore";
 

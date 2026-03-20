@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { register, login, me, updateMe, googleRedirect, googleCallback, githubRedirect, githubCallback } from "../controllers/auth.controller";
+import { register, login, me, updateMe, getUserById, googleRedirect, googleCallback, githubRedirect, githubCallback } from "../controllers/auth.controller";
 import { authenticate } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 
@@ -29,6 +29,7 @@ router.post("/register", validate(registerSchema), register);
 router.post("/login", validate(loginSchema), login);
 router.get("/me", authenticate, me);
 router.patch("/me", authenticate, updateMe);
+router.get("/users/:id", getUserById);
 
 router.get("/google", googleRedirect);
 router.get("/google/callback", googleCallback);

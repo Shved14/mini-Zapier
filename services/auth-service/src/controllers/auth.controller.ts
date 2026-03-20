@@ -55,6 +55,20 @@ export async function me(
   }
 }
 
+export async function getUserById(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { id } = req.params;
+    const result = await getMe(id);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function updateMe(
   req: Request,
   res: Response,

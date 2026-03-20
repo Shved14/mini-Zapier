@@ -47,9 +47,7 @@ function validateWorkflowJson(data: unknown): WorkflowJsonInput {
     throw new AppError(400, "workflowJson.edges must be an array");
   }
 
-  if (obj.nodes.length === 0) {
-    throw new AppError(400, "workflowJson.nodes must not be empty");
-  }
+  // Allow empty workflows - users should be able to delete all nodes
 
   for (let i = 0; i < obj.nodes.length; i++) {
     const node = obj.nodes[i] as Record<string, unknown>;

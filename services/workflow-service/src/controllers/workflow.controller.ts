@@ -72,7 +72,8 @@ export async function listLogs(
   try {
     const { id } = req.params;
     const logs = await getActivityLogs(id);
-    res.json(logs);
+    console.log('Controller returning logs:', logs);
+    res.json({ logs });
   } catch (error) {
     next(error);
   }
@@ -101,14 +102,113 @@ export async function update(
     const user = (req as any).user;
     const { id } = req.params;
     const { name, workflowJson, slackWebhook } = req.body;
+
+    // Get previous workflow for comparison
+    const previousWorkflow = await getWorkflowById(id, user.userId);
+
     const workflow = await updateWorkflow(id, user.userId, { name, workflowJson, slackWebhook });
-    if (name) await logActivity(id, user.userId, "workflow_renamed", { name });
-    if (workflowJson) await logActivity(id, user.userId, "workflow_updated", {});
-    if (slackWebhook !== undefined) await logActivity(id, user.userId, "settings_updated", { slackWebhook: !!slackWebhook });
+
+    // Log specific changes
+    if (name && name !== previousWorkflow.name) {
+      await logActivity(id, user.userId, "workflow_renamed", {
+        previousName: previousWorkflow.name,
+        newName: name
+      });
+    }
+
+    if (workflowJson && previousWorkflow.workflowJson) {
+      const prevJson = typeof previousWorkflow.workflowJson === 'object' ? previousWorkflow.workflowJson as any : {};
+      const currJson = typeof workflowJson === 'object' ? workflowJson as any : {};
+      const prevNodes = prevJson.nodes || [];
+      const currNodes = currJson.nodes || [];
+      const prevEdges = prevJson.edges || [];
+      const currEdges = currJson.edges || [];
+
+      // Log node changes
+      const addedNodes = currNodes.filter((n: any) => !prevNodes.find((p: any) => p.id === n.id));
+      const deletedNodes = prevNodes.filter((p: any) => !currNodes.find((n: any) => n.id === p.id));
+
+      for (const node of addedNodes) {
+        console.log('Adding node:', { id: node.id, type: node.type, fullNode: node });
+        await logActivity(id, user.userId, "node_added", {
+          nodeId: node.id,
+          nodeType: node.type || 'node'
+        });
+      }
+
+      for (const node of deletedNodes) {
+        await logActivity(id, user.userId, "node_deleted", {
+          nodeId: node.id,
+          nodeType: node.type || 'node'
+        });
+      }
+
+      // Log node config changes
+      for (const currNode of currNodes) {
+        const prevNode = prevNodes.find((p: any) => p.id === currNode.id);
+        if (prevNode && JSON.stringify(prevNode.config) !== JSON.stringify(currNode.config)) {
+          await logActivity(id, user.userId, "node_config_updated", {
+            nodeId: currNode.id,
+            nodeType: currNode.type || 'node',
+            configField: 'configuration'
+          });
+        }
+      }
+
+      // Log edge changes
+      const addedEdges = currEdges.filter((e: any) => !prevEdges.find((p: any) => p.source === e.source && p.target === e.target));
+      const deletedEdges = prevEdges.filter((p: any) => !currEdges.find((e: any) => e.source === p.source && e.target === p.target));
+
+      for (const edge of addedEdges) {
+        await logActivity(id, user.userId, "edge_added", {
+          source: edge.source,
+          target: edge.target
+        });
+      }
+
+      for (const edge of deletedEdges) {
+        await logActivity(id, user.userId, "edge_deleted", {
+          source: edge.source,
+          target: edge.target
+        });
+      }
+    }
+
+    if (slackWebhook !== undefined) {
+      await logActivity(id, user.userId, "settings_updated", { slackWebhook: !!slackWebhook });
+    }
+
     if ((workflow as any).slackWebhook && workflowJson) {
       notifySlack((workflow as any).slackWebhook, "Workflow Updated", `'${workflow.name}' was updated`);
     }
+
     res.json(workflow);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function run(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const user = (req as any).user;
+    const { id } = req.params;
+    const payload = req.body;
+
+    // Log workflow run start
+    await logActivity(id, user.userId, "workflow_run_started", { payload });
+
+    // TODO: Integrate with execution service
+    // For now, just return success
+    res.json({
+      message: "Workflow execution started",
+      runId: `run_${Date.now()}`,
+      workflowId: id,
+      status: "running"
+    });
   } catch (error) {
     next(error);
   }
