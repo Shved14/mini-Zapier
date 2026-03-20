@@ -53,27 +53,41 @@ export async function getActivityLogs(workflowId: string, limit: number = 50) {
     take: limit,
   });
 
+  // Fetch user details for all logs
+  const userIds = [...new Set(logs.map(log => log.userId))];
+  const users = await prisma.$queryRaw<Array<{ id: string, email: string, name: string | null }>>`
+    SELECT id, email, name FROM auth.users WHERE id = ANY(${userIds})
+  ` as Array<{ id: string, email: string, name: string | null }>;
+
+  const userMap = users.reduce((map, user) => {
+    map[user.id] = user;
+    return map;
+  }, {} as Record<string, { id: string, email: string, name: string | null }>);
+
   return logs.map((log) => {
     const meta = (log.metadata as any) ?? {};
+    const user = userMap[log.userId];
+    const displayName = user?.name || user?.email || log.userId.slice(0, 8) + "...";
+
     return {
       id: log.id,
       workflowId: log.workflowId,
       userId: log.userId,
       action: log.action,
-      metadata: meta,
+      metadata: { ...meta, userEmail: user?.email },
       createdAt: log.createdAt,
-      message: formatMessage(log.action, meta),
+      message: formatMessage(log.action, { ...meta, userName: displayName }),
       user: {
         id: log.userId,
-        email: meta.userEmail || log.userId.slice(0, 8) + "...",
-        name: meta.userEmail || null,
+        email: user?.email || log.userId,
+        name: user?.name || null,
       },
     };
   });
 }
 
 function formatMessage(action: string, meta: any): string {
-  const user = meta.userEmail || "Someone";
+  const user = meta.userName || meta.userEmail || "Someone";
 
   switch (action) {
     case "workflow_created":
