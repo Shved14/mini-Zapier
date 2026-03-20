@@ -7,6 +7,7 @@ import {
   oauthLogin,
   AppError,
 } from "../services/auth.service";
+import { sendVerificationCode, generateVerificationCode } from "../services/email.service";
 import axios from "axios";
 
 export async function register(
@@ -16,8 +17,23 @@ export async function register(
 ): Promise<void> {
   try {
     const { email, password, name } = req.body;
+
+    // Отправляем код верификации
+    const code = generateVerificationCode();
+    try {
+      await sendVerificationCode(email, code);
+      console.log(`✅ Verification code sent to ${email}`);
+    } catch (emailError) {
+      console.error(`❌ Failed to send verification email to ${email}:`, emailError);
+      // Продолжаем регистрацию даже если email не отправился
+    }
+
     const result = await registerUser({ email, password, name });
-    res.status(201).json(result);
+    res.status(201).json({
+      ...result,
+      message: "Registration successful. Verification code sent to your email.",
+      verificationCode: code, // Только для тестирования!
+    });
   } catch (error) {
     next(error);
   }
