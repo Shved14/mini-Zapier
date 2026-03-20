@@ -4,13 +4,8 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production";
 
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
-  console.log('[auth] Headers:', req.headers);
-  console.log('[auth] X-User-ID:', req.headers['x-user-id']);
-  console.log('[auth] X-User-Email:', req.headers['x-user-email']);
-
   // Check if user is already set by API gateway (trusted proxy)
   if ((req as any).user) {
-    console.log('[auth] User already set:', (req as any).user);
     next();
     return;
   }
@@ -20,19 +15,17 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   const userEmail = req.headers['x-user-email'] as string;
   const userName = req.headers['x-user-name'] as string;
 
-  console.log('[auth] Extracted from headers:', { userId, userEmail, userName });
-
   if (userId && userEmail) {
     (req as any).user = {
       userId,
       email: userEmail,
       name: userName || ''
     };
-    console.log('[auth] User set from headers:', (req as any).user);
     next();
     return;
   }
 
+  // Fallback: verify JWT directly
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith("Bearer ")) {

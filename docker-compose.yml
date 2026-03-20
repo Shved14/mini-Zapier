@@ -136,6 +136,8 @@ services:
 
       REDIS_URL: redis://redis:6379
 
+      JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
+
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
 
