@@ -116,6 +116,8 @@ services:
 
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
 
+      NOTIFICATION_SERVICE_URL: http://notification-service:3006
+
     depends_on:
 
       postgres:
