@@ -94,8 +94,15 @@ export async function googleCallback(
 ): Promise<void> {
   try {
     const code = req.query.code as string;
-    if (!code) { res.redirect(`${FRONTEND_URL}/?error=missing_code`); return; }
+    console.log("Google OAuth callback received:", { code: code ? code.substring(0, 20) + "..." : "missing" });
 
+    if (!code) {
+      console.log("Missing code in callback");
+      res.redirect(`${FRONTEND_URL}/?error=missing_code`);
+      return;
+    }
+
+    console.log("Exchanging code for tokens...");
     const { data: tokens } = await axios.post("https://oauth2.googleapis.com/token", {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -104,11 +111,15 @@ export async function googleCallback(
       grant_type: "authorization_code",
     });
 
+    console.log("Got tokens, fetching user profile...");
     const { data: profile } = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
 
+    console.log("Got user profile:", { email: profile.email, name: profile.name });
     const result = await oauthLogin({ email: profile.email, name: profile.name, provider: "google" });
+
+    console.log("OAuth login successful, redirecting with token");
     res.redirect(`${FRONTEND_URL}/?token=${result.token}`);
   } catch (error) {
     console.error("Google OAuth error:", error);

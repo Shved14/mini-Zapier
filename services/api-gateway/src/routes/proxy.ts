@@ -1,22 +1,35 @@
 import { Router } from "express";
-import { createProxyMiddleware, Options } from "http-proxy-middleware";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import { validateJwt } from "../middleware/auth";
 
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || "http://localhost:3001";
 const WORKFLOW_SERVICE_URL = process.env.WORKFLOW_SERVICE_URL || "http://localhost:3002";
 const EXECUTION_SERVICE_URL = process.env.EXECUTION_SERVICE_URL || "http://localhost:3003";
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:3006";
-const REALTIME_SERVICE_URL = process.env.REALTIME_SERVICE_URL || "http://localhost:3010";
 
-function proxy(target: string, pathFilter: string): ReturnType<typeof createProxyMiddleware> {
-  const options: Options = {
+/**
+ * Creates a proxy middleware for a given target service.
+ * @param target  - upstream service URL  (e.g. http://auth-service:3001)
+ * @param prefix  - the path prefix the target expects (e.g. "/auth")
+ *
+ * Because this router is mounted at /api and then sub-mounted at /<prefix>,
+ * Express strips both prefixes, so req.url inside the middleware is just the
+ * remainder (e.g. "/login").  pathRewrite prepends the service prefix back so
+ * the upstream service receives the full path it expects.
+ *
+ * fixRequestBody re-streams the JSON body that express.json() already parsed.
+ */
+function serviceProxy(target: string, prefix: string) {
+  return createProxyMiddleware({
     target,
     changeOrigin: true,
-    pathFilter,
+    pathRewrite: (_path, req) => {
+      // req.url is the remainder after Express stripped /api and /<prefix>
+      const reconstructed = `${prefix}${req.url}`;
+      console.log(`[proxy] ${req.method} ${(req as any).originalUrl || req.url} → ${target}${reconstructed}`);
+      return reconstructed;
+    },
     on: {
-      proxyReq: (_proxyReq, req) => {
-        console.log(`[proxy] ${req.method} ${(req as any).originalUrl || req.url} → ${target}`);
-      },
       error: (err, _req, res) => {
         console.error(`[proxy] Error: ${err.message}`);
         if ("writeHead" in res) {
@@ -24,27 +37,17 @@ function proxy(target: string, pathFilter: string): ReturnType<typeof createProx
         }
       },
     },
-  };
-
-  return createProxyMiddleware(options) as any;
+  }) as any;
 }
 
 const router = Router();
 
 // Auth routes — no JWT required (login/register are public)
-router.use(proxy(AUTH_SERVICE_URL, "/auth/**"));
+router.use("/auth", serviceProxy(AUTH_SERVICE_URL, "/auth"));
 
 // Protected routes — JWT required, then proxy
-router.use("/workflows", validateJwt);
-router.use(proxy(WORKFLOW_SERVICE_URL, "/workflows/**"));
-
-router.use("/execute", validateJwt);
-router.use(proxy(EXECUTION_SERVICE_URL, "/execute/**"));
-
-router.use("/notifications", validateJwt);
-router.use(proxy(NOTIFICATION_SERVICE_URL, "/notifications/**"));
-
-router.use("/realtime", validateJwt);
-router.use(proxy(REALTIME_SERVICE_URL, "/realtime/**"));
+router.use("/workflows", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows"));
+router.use("/execute", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/execute"));
+router.use("/notifications", validateJwt, serviceProxy(NOTIFICATION_SERVICE_URL, "/notifications"));
 
 export default router;

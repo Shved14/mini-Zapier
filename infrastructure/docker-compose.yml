@@ -96,6 +96,9 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
+      - GITHUB_REDIRECT_URI=http://localhost:3000/api/auth/github/callback
+      - ENABLE_OAUTH=true
       - LOG_LEVEL=info
     depends_on:
       postgres:
@@ -123,6 +126,7 @@ services:
       - PORT=3002
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/minizapier_workflows
       - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
       - LOG_LEVEL=info
     depends_on:
       postgres:
@@ -153,6 +157,7 @@ services:
       - WORKFLOW_SERVICE_URL=http://workflow-service:3002
       - ACTION_SERVICE_URL=http://action-service:3005
       - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
       - LOG_LEVEL=info
     depends_on:
       postgres:
@@ -183,6 +188,7 @@ services:
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/minizapier_triggers
       - REDIS_URL=redis://redis:6379
       - EXECUTION_SERVICE_URL=http://execution-service:3003
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
       - LOG_LEVEL=info
     depends_on:
       postgres:
@@ -210,6 +216,7 @@ services:
       - PORT=3005
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/minizapier_actions
       - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
       - LOG_LEVEL=info
     depends_on:
       postgres:
@@ -237,6 +244,7 @@ services:
       - PORT=3006
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/minizapier_notifications
       - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
       - LOG_LEVEL=info
     depends_on:
       postgres:

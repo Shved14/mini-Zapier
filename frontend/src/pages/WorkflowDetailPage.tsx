@@ -77,10 +77,10 @@ export const WorkflowDetailPage: React.FC = () => {
 
   const handleStatusToggle = async () => {
     if (!workflow) return;
-    const newActive = !workflow.isActive;
+    const newStatus = (workflow.status === "active" || workflow.isActive) ? "paused" : "active";
     try {
-      const updated = await workflowsApi.update(workflow.id, { isActive: newActive });
-      setWorkflow((prev) => prev ? { ...prev, isActive: updated.isActive ?? newActive } : prev);
+      const updated = await workflowsApi.patchStatus(workflow.id, newStatus);
+      setWorkflow((prev) => prev ? { ...prev, status: updated.status, isActive: updated.status === "active" } : prev);
     } catch { /* silently fail */ }
   };
 
@@ -177,8 +177,8 @@ export const WorkflowDetailPage: React.FC = () => {
 
           {/* Status badge */}
           <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${workflow.isActive
-              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-              : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+            : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
             }`}>
             {workflow.isActive ? "Active" : "Paused"}
           </span>
@@ -234,8 +234,8 @@ export const WorkflowDetailPage: React.FC = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${isActive
-                  ? "border-purple-500 text-white"
-                  : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600"
+                ? "border-purple-500 text-white"
+                : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600"
                 }`}
             >
               <Icon className="h-4 w-4" />

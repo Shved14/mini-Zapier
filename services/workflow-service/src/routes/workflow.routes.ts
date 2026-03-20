@@ -28,6 +28,7 @@ router.post("/", authenticate, validate(createWorkflowSchema), create);
 router.get("/", authenticate, getAll);
 router.get("/:id", authenticate, getById);
 router.put("/:id", authenticate, validate(updateWorkflowSchema), update);
+router.patch("/:id", authenticate, validate(updateWorkflowSchema), update);
 router.patch("/:id/status", authenticate, patchStatus);
 router.delete("/:id", authenticate, remove);
 

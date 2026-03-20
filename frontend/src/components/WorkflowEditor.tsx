@@ -38,11 +38,20 @@ const paletteNodes = [
   "transform",
 ] as const;
 
+const defaultConfigs: Record<string, Record<string, unknown>> = {
+  http: { url: "https://example.com/api", method: "GET", headers: {} },
+  email: { to: "", subject: "", body: "" },
+  telegram: { chatId: "", message: "" },
+  db: { operation: "query", query: "" },
+  transform: { expression: "" },
+  trigger: {},
+};
+
 const createNode = (type: string, index: number): Node => ({
   id: `${type}-${Date.now()}-${index}`,
   type: "default",
   position: { x: 100 + index * 40, y: 80 + index * 40 },
-  data: { label: nodeTypeLabels[type] ?? type, type, config: {} },
+  data: { label: nodeTypeLabels[type] ?? type, type, config: defaultConfigs[type] ?? {} },
 });
 
 export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
@@ -78,13 +87,15 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 
   const initialEdges: Edge[] = useMemo(() => {
     const edges = (initialWorkflowJson?.edges ?? []) as Array<{
-      from: string;
-      to: string;
+      source?: string;
+      target?: string;
+      from?: string;
+      to?: string;
     }>;
     return edges.map((e, idx) => ({
-      id: `e-${idx}-${e.from}-${e.to}`,
-      source: e.from,
-      target: e.to,
+      id: `e-${idx}-${e.source || e.from}-${e.target || e.to}`,
+      source: e.source || e.from || "",
+      target: e.target || e.to || "",
     }));
   }, [initialWorkflowJson]);
 
@@ -159,8 +170,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           config: n.data.config ?? {},
         })),
         edges: edges.map((e) => ({
-          from: e.source,
-          to: e.target,
+          source: e.source,
+          target: e.target,
         })),
       };
       await workflowsApi.update(workflow.id, { workflowJson });

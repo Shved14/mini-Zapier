@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Authentication Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            console.log(message);
+            results.innerHTML += '<p>' + message + '</p>';
+        }
+        
+        async function testAuth() {
+            try {
+                log('🧪 Testing Authentication Flow...');
+                
+                // Test register
+                log('1. Testing registration...');
+                try {
+                    const regResponse = await axios.post(`${API_BASE}/auth/register`, {
+                        email: 'test@example.com',
+                        password: 'password123',
+                        name: 'Test User'
+                    });
+                    log('✅ Registration successful');
+                } catch (regError) {
+                    if (regError.response?.status === 409) {
+                        log('✅ User already exists (expected)');
+                    } else {
+                        log('❌ Registration failed: ' + (regError.response?.data?.message || regError.message));
+                        return;
+                    }
+                }
+                
+                // Test login
+                log('2. Testing login...');
+                const loginResponse = await axios.post(`${API_BASE}/auth/login`, {
+                    email: 'test@example.com',
+                    password: 'password123'
+                });
+                
+                if (loginResponse.data.token) {
+                    log('✅ Login successful - token received');
+                    const token = loginResponse.data.token;
+                    log(`Token length: ${token.length} characters`);
+                    
+                    // Test /auth/me
+                    log('3. Testing /auth/me endpoint...');
+                    try {
+                        const meResponse = await axios.get(`${API_BASE}/auth/me`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (meResponse.data.email) {
+                            log(`✅ /auth/me successful - user: ${meResponse.data.email}`);
+                        } else {
+                            log('❌ /auth/me failed - no user data returned');
+                        }
+                    } catch (meError) {
+                        log('❌ /auth/me failed: ' + (meError.response?.data?.message || meError.message));
+                    }
+                    
+                    // Test invalid token
+                    log('4. Testing invalid token...');
+                    try {
+                        await axios.get(`${API_BASE}/auth/me`, {
+                            headers: {
+                                'Authorization': 'Bearer invalid_token_here'
+                            }
+                        });
+                        log('❌ Invalid token test failed - should have returned 401');
+                    } catch (invalidError) {
+                        if (invalidError.response?.status === 401) {
+                            log('✅ Invalid token correctly returns 401');
+                        } else {
+                            log('❌ Invalid token test failed - wrong status: ' + invalidError.response?.status);
+                        }
+                    }
+                    
+                } else {
+                    log('❌ Login failed - no token received');
+                }
+                
+                log('🎯 Authentication flow test completed!');
+                log('📋 Now test in the main app at http://localhost:3007');
+                
+            } catch (error) {
+                log('❌ Test failed: ' + (error.response?.data?.message || error.message));
+            }
+        }
+        
+        // Run test when page loads
+        testAuth();
+    </script>
+</body>
+</html>

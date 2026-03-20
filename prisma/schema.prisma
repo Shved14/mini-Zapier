@@ -21,17 +21,19 @@ enum WorkflowStatus {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  password  String?
-  provider  String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String?
+  password    String?
+  provider    String?
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
-  subscriptions    Subscription[]
-  workflows        Workflow[]
-  workflowMembers  WorkflowMember[]
-  activityLogs     ActivityLog[]
+  subscriptions       Subscription[]
+  workflows           Workflow[]
+  workflowMembers     WorkflowMember[]
+  activityLogs        ActivityLog[]
+  emailVerifications  EmailVerification[]
 }
 
 model EmailVerification {
@@ -42,6 +44,7 @@ model EmailVerification {
   createdAt DateTime @default(now())
 
   @@index([email])
+  @@index([expiresAt])
 }
 
 model Subscription {

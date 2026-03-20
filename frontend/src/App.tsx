@@ -11,24 +11,55 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { useAuthStore } from "./store/useAuthStore";
 
+// Loading spinner component
+const LoadingSpinner: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+  </div>
+);
+
 const ProtectedRoutes: React.FC = () => {
-  const { token, logout, fetchUser } = useAuthStore();
+  const { token, user, loading, initialized, fetchUser } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
 
   const pathSegments = location.pathname.split("/").filter(Boolean);
   const currentPage = pathSegments[0] || "workflows";
 
   useEffect(() => {
+    console.log("[ProtectedRoutes] Auth state:", { token: !!token, user: !!user, loading, initialized, fetchAttempted });
+
+    if (!initialized) return;
+
     if (!token) {
+      console.log("[ProtectedRoutes] No token → landing");
       navigate("/", { replace: true });
       return;
     }
-    fetchUser();
-  }, [token, navigate, fetchUser]);
 
-  if (!token) return null;
+    // Fetch user once if we have a token but no user yet
+    if (token && !user && !loading && !fetchAttempted) {
+      console.log("[ProtectedRoutes] Fetching user data");
+      setFetchAttempted(true);
+      fetchUser();
+    }
+  }, [token, user, loading, initialized, navigate, fetchUser, fetchAttempted]);
+
+  // Show loading while initializing or fetching user
+  if (!initialized || loading) {
+    console.log("[ProtectedRoutes] Showing loading spinner");
+    return <LoadingSpinner />;
+  }
+
+  // Redirect if no token after initialization
+  if (!token) {
+    console.log("[ProtectedRoutes] No token after initialization, returning null");
+    return null;
+  }
+
+  console.log("[ProtectedRoutes] Rendering protected content");
 
   const handleChangePage = (page: string) => {
     navigate(`/${page}`);
@@ -39,6 +70,7 @@ const ProtectedRoutes: React.FC = () => {
   };
 
   const handleLogout = () => {
+    const { logout } = useAuthStore.getState();
     logout();
     navigate("/", { replace: true });
   };
@@ -78,9 +110,19 @@ const OAuthTokenHandler: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get("token");
     if (urlToken) {
-      setToken(urlToken);
-      fetchUser();
-      navigate("/workflows", { replace: true });
+      console.log("[OAuthTokenHandler] Found token in URL");
+      const handleOAuthToken = async () => {
+        try {
+          setToken(urlToken);
+          await fetchUser();
+          navigate("/workflows", { replace: true });
+        } catch (error) {
+          console.error("[OAuthTokenHandler] OAuth token validation failed:", error);
+          navigate("/", { replace: true });
+        }
+      };
+
+      handleOAuthToken();
     }
   }, [setToken, fetchUser, navigate]);
 
@@ -88,7 +130,19 @@ const OAuthTokenHandler: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  const token = useAuthStore((s) => s.token);
+  const { token, user, initialized, initialize } = useAuthStore();
+
+  useEffect(() => {
+    console.log("[App] Initializing app");
+    initialize();
+  }, [initialize]);
+
+  console.log("[App] App state:", { token: !!token, user: !!user, initialized });
+
+  // Show loading while app is initializing
+  if (!initialized) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <Router>
@@ -97,7 +151,7 @@ const App: React.FC = () => {
         <Route
           path="/"
           element={
-            token ? (
+            token && user ? (
               <Navigate to="/workflows" replace />
             ) : (
               <div className="min-h-screen bg-gradient-dark text-white">
