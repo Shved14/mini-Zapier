@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import axios from 'axios';
 
 interface EmailOptions {
   to: string;
@@ -8,32 +8,38 @@ interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '465'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-  });
+  const apiKey = process.env.RESEND_API_KEY || process.env.SMTP_PASS;
+  const from = process.env.SMTP_FROM || 'onboarding@resend.dev';
+
+  if (!apiKey) {
+    console.warn('⚠️ No RESEND_API_KEY or SMTP_PASS configured, skipping email');
+    return;
+  }
 
   try {
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: options.to,
-      subject: options.subject,
-      text: options.text,
-      html: options.html,
-    });
+    const response = await axios.post(
+      'https://api.resend.com/emails',
+      {
+        from,
+        to: [options.to],
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
 
-    console.log(`✅ Email sent to ${options.to}: ${options.subject}`);
-  } catch (error) {
-    console.error(`❌ Failed to send email to ${options.to}:`, error);
-    throw new Error('Failed to send email');
+    console.log(`✅ Email sent to ${options.to}: ${options.subject} (id: ${response.data?.id})`);
+  } catch (error: any) {
+    const msg = error.response?.data?.message || error.message;
+    console.error(`❌ Failed to send email to ${options.to}:`, msg);
+    throw new Error(`Failed to send email: ${msg}`);
   }
 }
 

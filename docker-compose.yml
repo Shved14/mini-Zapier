@@ -86,17 +86,9 @@ services:
 
       GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-http://localhost:3000/api/auth/github/callback}
 
-      SMTP_HOST: ${SMTP_HOST:-smtp.ethereal.email}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
 
-      SMTP_PORT: ${SMTP_PORT:-587}
-
-      SMTP_USER: ${SMTP_USER:-}
-
-      SMTP_PASS: ${SMTP_PASS:-}
-
-      SMTP_FROM: ${SMTP_FROM:-}
-
-      SMTP_SECURE: "false"
+      SMTP_FROM: ${SMTP_FROM:-onboarding@resend.dev}
 
     depends_on:
 
