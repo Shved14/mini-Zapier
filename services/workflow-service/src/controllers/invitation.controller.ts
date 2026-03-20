@@ -20,6 +20,20 @@ export async function invite(req: Request, res: Response, next: NextFunction): P
       inviterUserId: user.userId,
     });
 
+    // Create in-app notification for the inviter
+    try {
+      await createInAppNotification({
+        userId: user.userId,
+        type: 'workflow_invite_sent',
+        title: 'Invitation Sent',
+        message: `Invitation sent to ${email} for workflow`,
+        relatedId: invitation.id,
+      });
+    } catch (notifError) {
+      console.error('Failed to create in-app notification:', notifError);
+      // Don't fail the request if notification fails
+    }
+
     res.status(201).json({
       message: "Invitation sent successfully",
       invitation: {
@@ -84,9 +98,21 @@ export async function acceptInvite(req: Request, res: Response, next: NextFuncti
 
 export async function declineInvite(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const user = (req as any).user;
     const { token } = req.params;
 
     const result = await declineInvitation(token);
+
+    // Notify the user who declined
+    if (user?.userId) {
+      await createInAppNotification({
+        userId: user.userId,
+        type: "workflow_invite_declined",
+        title: "Invite Declined",
+        message: `You declined the invitation to join "${result.workflowName}"`,
+        relatedId: result.workflowId,
+      });
+    }
 
     res.json(result);
   } catch (error) {

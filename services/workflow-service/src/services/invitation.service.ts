@@ -166,7 +166,11 @@ export async function declineInvitation(token: string) {
 
   // Don't log invitation decline - it's not a real member action
 
-  return { message: "Invitation declined" };
+  return {
+    message: "Invitation declined",
+    workflowName: invitation.workflow.name,
+    workflowId: invitation.workflow.id,
+  };
 }
 
 export async function cancelInvitation(invitationId: string) {
