@@ -86,6 +86,18 @@ services:
 
       GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-http://localhost:3000/api/auth/github/callback}
 
+      SMTP_HOST: ${SMTP_HOST:-smtp.ethereal.email}
+
+      SMTP_PORT: ${SMTP_PORT:-587}
+
+      SMTP_USER: ${SMTP_USER:-}
+
+      SMTP_PASS: ${SMTP_PASS:-}
+
+      SMTP_FROM: ${SMTP_FROM:-}
+
+      SMTP_SECURE: "false"
+
     depends_on:
 
       postgres:

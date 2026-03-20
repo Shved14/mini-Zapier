@@ -153,11 +153,19 @@ export async function update(
       const addedNodes = currNodes.filter((n: any) => !prevNodes.find((p: any) => p.id === n.id));
       const deletedNodes = prevNodes.filter((p: any) => !currNodes.find((n: any) => n.id === p.id));
 
+      const slackUrl = (workflow as any).slackWebhook;
+
       for (const node of addedNodes) {
         await logActivity(id, user.userId, "node_added", {
           nodeId: node.id,
           nodeType: node.type || 'node'
         }, user.email);
+        if (slackUrl) {
+          notifySlack(slackUrl, "Node Added", `${user.email} added a node`, {
+            "Workflow": workflow.name,
+            "Node": `\`${node.data?.label || node.type || 'node'}\` (\`${node.id}\`)`,
+          });
+        }
       }
 
       for (const node of deletedNodes) {
@@ -165,17 +173,29 @@ export async function update(
           nodeId: node.id,
           nodeType: node.type || 'node'
         }, user.email);
+        if (slackUrl) {
+          notifySlack(slackUrl, "Node Removed", `${user.email} removed a node`, {
+            "Workflow": workflow.name,
+            "Node": `\`${node.data?.label || node.type || 'node'}\` (\`${node.id}\`)`,
+          });
+        }
       }
 
       // Log node config changes
       for (const currNode of currNodes) {
         const prevNode = prevNodes.find((p: any) => p.id === currNode.id);
-        if (prevNode && JSON.stringify(prevNode.config) !== JSON.stringify(currNode.config)) {
+        if (prevNode && JSON.stringify(prevNode.data) !== JSON.stringify(currNode.data)) {
           await logActivity(id, user.userId, "node_config_updated", {
             nodeId: currNode.id,
             nodeType: currNode.type || 'node',
             configField: 'configuration'
           }, user.email);
+          if (slackUrl) {
+            notifySlack(slackUrl, "Config Updated", `${user.email} updated node config`, {
+              "Workflow": workflow.name,
+              "Node": `\`${currNode.data?.label || currNode.type || 'node'}\` (\`${currNode.id}\`)`,
+            });
+          }
         }
       }
 
@@ -188,6 +208,12 @@ export async function update(
           source: edge.source,
           target: edge.target
         }, user.email);
+        if (slackUrl) {
+          notifySlack(slackUrl, "Nodes Connected", `${user.email} connected nodes`, {
+            "Workflow": workflow.name,
+            "Connection": `\`${edge.source}\` → \`${edge.target}\``,
+          });
+        }
       }
 
       for (const edge of deletedEdges) {
@@ -195,15 +221,17 @@ export async function update(
           source: edge.source,
           target: edge.target
         }, user.email);
+        if (slackUrl) {
+          notifySlack(slackUrl, "Nodes Disconnected", `${user.email} disconnected nodes`, {
+            "Workflow": workflow.name,
+            "Connection": `\`${edge.source}\` → \`${edge.target}\``,
+          });
+        }
       }
     }
 
     if (slackWebhook !== undefined) {
       await logActivity(id, user.userId, "settings_updated", { slackWebhook: !!slackWebhook }, user.email);
-    }
-
-    if ((workflow as any).slackWebhook && workflowJson) {
-      notifySlack((workflow as any).slackWebhook, "Workflow Updated", `'${workflow.name}' was updated`);
     }
 
     res.json(workflow);

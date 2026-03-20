@@ -32,7 +32,12 @@ export async function invite(req: Request, res: Response, next: NextFunction): P
 
     const workflow = await prisma.workflow.findUnique({ where: { id } });
     if (workflow?.slackWebhook) {
-      notifySlack(workflow.slackWebhook, "Member Added", `User ${targetUserId} was invited to '${workflow.name}'`);
+      notifySlack(workflow.slackWebhook, "Member Added", `A new member was invited to *'${workflow.name}'*`, {
+        "Workflow": workflow.name,
+        "Invited User": targetUserId,
+        "Role": role || "editor",
+        "Invited by": user.email || "unknown",
+      });
     }
 
     res.status(201).json(member);

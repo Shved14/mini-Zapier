@@ -62,13 +62,62 @@ router.use("/auth/github/callback", serviceProxy(AUTH_SERVICE_URL, "/auth/github
 // Protected auth routes — JWT required
 router.use("/auth/me", validateJwt, serviceProxy(AUTH_SERVICE_URL, "/auth/me"));
 
+// Public invite routes — MUST be before the catch-all /workflows route
+// Use a custom proxy that preserves the full original path
+router.get("/workflows/invite/:token", (req, _res, next) => {
+  // Rewrite req.url so the proxy forwards the full path to workflow-service
+  req.url = `/workflows/invite/${req.params.token}`;
+  next();
+}, createProxyMiddleware({
+  target: WORKFLOW_SERVICE_URL,
+  changeOrigin: true,
+  on: {
+    error: (err, _req, res) => {
+      console.error(`[proxy] Error: ${err.message}`);
+      if ("writeHead" in res) { (res as any).status(502).json({ message: "Service unavailable" }); }
+    },
+  },
+}) as any);
+
+router.post("/workflows/invite/:token/accept", validateJwt, (req, _res, next) => {
+  req.url = `/workflows/invite/${req.params.token}/accept`;
+  next();
+}, createProxyMiddleware({
+  target: WORKFLOW_SERVICE_URL,
+  changeOrigin: true,
+  on: {
+    proxyReq: (proxyReq, req) => {
+      if ((req as any).user) {
+        proxyReq.setHeader('X-User-ID', (req as any).user.userId);
+        proxyReq.setHeader('X-User-Email', (req as any).user.email);
+        proxyReq.setHeader('X-User-Name', (req as any).user.name || '');
+      }
+    },
+    error: (err, _req, res) => {
+      console.error(`[proxy] Error: ${err.message}`);
+      if ("writeHead" in res) { (res as any).status(502).json({ message: "Service unavailable" }); }
+    },
+  },
+}) as any);
+
+router.post("/workflows/invite/:token/decline", (req, _res, next) => {
+  req.url = `/workflows/invite/${req.params.token}/decline`;
+  next();
+}, createProxyMiddleware({
+  target: WORKFLOW_SERVICE_URL,
+  changeOrigin: true,
+  on: {
+    error: (err, _req, res) => {
+      console.error(`[proxy] Error: ${err.message}`);
+      if ("writeHead" in res) { (res as any).status(502).json({ message: "Service unavailable" }); }
+    },
+  },
+}) as any);
+
 // Protected routes — JWT required, then proxy
 router.use("/workflows", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows"));
 router.use("/runs", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/api/runs"));
 router.use("/execute", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/execute"));
-router.use("/workflows/invite/:token", serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token"));
-router.post("/workflows/invite/:token/accept", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/accept"));
-router.post("/workflows/invite/:token/decline", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/decline"));
 
 // Stats endpoints on execution service
 router.use("/stats", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/api/stats"));
