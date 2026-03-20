@@ -3,13 +3,6 @@ import { buildGraph } from "./graph";
 import { getExecutor } from "../executors/registry";
 import { ExecutorResult } from "../executors/base.executor";
 import { logger } from "../utils/logger";
-import {
-  SlackContext,
-  sendWorkflowStarted,
-  sendStepStarted,
-  sendStepCompleted,
-  sendWorkflowFinished,
-} from "../services/slackService";
 
 export interface NodeLog {
   nodeId: string;
@@ -39,32 +32,11 @@ export async function runWorkflow(data: WorkflowJobData): Promise<WorkflowResult
   logger.info(`Starting workflow execution`, { workflowId: data.workflowId, userId: data.userId });
 
   const graph = buildGraph(data.workflowJson.nodes, data.workflowJson.edges);
-  const totalSteps = graph.sorted.length;
-  const workflowName = data.workflowName || "Unnamed Workflow";
-
-  // ── Slack context ──
-  const slackCtx: SlackContext = {
-    webhookUrl: data.slackWebhook || undefined,
-  };
-  const hasSlack = !!slackCtx.webhookUrl;
-
-  // ── Notify: Workflow Started ──
-  if (hasSlack) {
-    const threadTs = await sendWorkflowStarted(slackCtx, {
-      workflowName,
-      workflowId: data.workflowId,
-      totalSteps,
-    });
-    if (threadTs) {
-      slackCtx.threadTs = threadTs;
-    }
-  }
 
   let lastOutput: unknown = null;
   let failed = false;
 
-  for (let stepIndex = 0; stepIndex < graph.sorted.length; stepIndex++) {
-    const nodeId = graph.sorted[stepIndex];
+  for (const nodeId of graph.sorted) {
     const node = graph.nodes.get(nodeId)!;
     const executor = getExecutor(node.type);
 
@@ -95,11 +67,6 @@ export async function runWorkflow(data: WorkflowJobData): Promise<WorkflowResult
 
     logger.info(`Executing node ${nodeId} (${node.type})`, { workflowId: data.workflowId });
 
-    // ── Notify: Step Started ──
-    if (hasSlack) {
-      sendStepStarted(slackCtx, { nodeId, nodeType: node.type, stepIndex, totalSteps });
-    }
-
     const nodeStart = Date.now();
     let result: ExecutorResult;
 
@@ -125,19 +92,6 @@ export async function runWorkflow(data: WorkflowJobData): Promise<WorkflowResult
     };
     logs.push(log);
 
-    // ── Notify: Step Completed ──
-    if (hasSlack) {
-      sendStepCompleted(slackCtx, {
-        nodeId,
-        nodeType: node.type,
-        stepIndex,
-        totalSteps,
-        status: result.success ? "success" : "failed",
-        durationMs,
-        error: result.error,
-      });
-    }
-
     if (!result.success) {
       logger.error(`Node ${nodeId} failed: ${result.error}`, { workflowId: data.workflowId });
       failed = true;
@@ -155,20 +109,6 @@ export async function runWorkflow(data: WorkflowJobData): Promise<WorkflowResult
     totalDurationMs,
     nodesExecuted: logs.length,
   });
-
-  // ── Notify: Workflow Finished ──
-  if (hasSlack) {
-    const lastError = logs.find((l) => l.error)?.error;
-    sendWorkflowFinished(slackCtx, {
-      workflowName,
-      workflowId: data.workflowId,
-      status: failed ? "failed" : "completed",
-      totalDurationMs,
-      stepsCompleted: logs.filter((l) => l.status === "success").length,
-      totalSteps,
-      error: lastError,
-    });
-  }
 
   return {
     workflowId: data.workflowId,

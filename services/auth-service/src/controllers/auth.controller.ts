@@ -5,7 +5,6 @@ import {
   getMe,
   updateUser,
   oauthLogin,
-  verifyEmail,
   AppError,
 } from "../services/auth.service";
 import axios from "axios";
@@ -19,20 +18,6 @@ export async function register(
     const { email, password, name } = req.body;
     const result = await registerUser({ email, password, name });
     res.status(201).json(result);
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function verifyEmailCode(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    const { email, code } = req.body;
-    const result = await verifyEmail(email, code);
-    res.json(result);
   } catch (error) {
     next(error);
   }

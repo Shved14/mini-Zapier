@@ -10,7 +10,7 @@ import {
 } from "../services/workflow.service";
 import { logActivity } from "../services/activity.service";
 import { getActivityLogs } from "../services/activity.service";
-import { notifySlack, notifySlackUserAction } from "../services/slack.service";
+import { notifySlack } from "../services/slack.service";
 
 export async function create(
   req: Request,
@@ -115,9 +115,6 @@ export async function update(
       }, user.email);
     }
 
-    const wh = (workflow as any).slackWebhook;
-    const userName = user.email || "Unknown";
-
     if (workflowJson && previousWorkflow.workflowJson) {
       const prevJson = typeof previousWorkflow.workflowJson === 'object' ? previousWorkflow.workflowJson as any : {};
       const currJson = typeof workflowJson === 'object' ? workflowJson as any : {};
@@ -135,7 +132,6 @@ export async function update(
           nodeId: node.id,
           nodeType: node.type || 'node'
         }, user.email);
-        notifySlackUserAction(wh, { action: "node_added", userName, workflowName: workflow.name, details: `Node: \`${node.type || 'node'}\` (\`${node.id}\`)` });
       }
 
       for (const node of deletedNodes) {
@@ -143,7 +139,6 @@ export async function update(
           nodeId: node.id,
           nodeType: node.type || 'node'
         }, user.email);
-        notifySlackUserAction(wh, { action: "node_deleted", userName, workflowName: workflow.name, details: `Node: \`${node.type || 'node'}\` (\`${node.id}\`)` });
       }
 
       // Log node config changes
@@ -155,7 +150,6 @@ export async function update(
             nodeType: currNode.type || 'node',
             configField: 'configuration'
           }, user.email);
-          notifySlackUserAction(wh, { action: "node_config_updated", userName, workflowName: workflow.name, details: `Node: \`${currNode.type || 'node'}\` (\`${currNode.id}\`)` });
         }
       }
 
@@ -168,7 +162,6 @@ export async function update(
           source: edge.source,
           target: edge.target
         }, user.email);
-        notifySlackUserAction(wh, { action: "edge_added", userName, workflowName: workflow.name, details: `\`${edge.source}\` → \`${edge.target}\`` });
       }
 
       for (const edge of deletedEdges) {
@@ -176,13 +169,15 @@ export async function update(
           source: edge.source,
           target: edge.target
         }, user.email);
-        notifySlackUserAction(wh, { action: "edge_deleted", userName, workflowName: workflow.name, details: `\`${edge.source}\` → \`${edge.target}\`` });
       }
     }
 
     if (slackWebhook !== undefined) {
       await logActivity(id, user.userId, "settings_updated", { slackWebhook: !!slackWebhook }, user.email);
-      notifySlackUserAction(wh, { action: "settings_updated", userName, workflowName: workflow.name });
+    }
+
+    if ((workflow as any).slackWebhook && workflowJson) {
+      notifySlack((workflow as any).slackWebhook, "Workflow Updated", `'${workflow.name}' was updated`);
     }
 
     res.json(workflow);
@@ -199,63 +194,18 @@ export async function run(
   try {
     const user = (req as any).user;
     const { id } = req.params;
-
-    // Get the workflow with its full JSON
-    const workflow = await getWorkflowById(id, user.userId);
-
-    if (!workflow.workflowJson) {
-      res.status(400).json({ message: "Workflow has no configuration" });
-      return;
-    }
-
-    const wfJson = workflow.workflowJson as any;
-    const nodes = (wfJson.nodes || []).map((n: any) => ({
-      id: n.id,
-      type: n.type || n.data?.type || "unknown",
-      config: n.data?.config || n.config || {},
-    }));
-    const edges = (wfJson.edges || []).map((e: any) => ({
-      source: e.source,
-      target: e.target,
-    }));
+    const payload = req.body;
 
     // Log workflow run start
-    await logActivity(id, user.userId, "workflow_run_started", {}, user.email);
+    await logActivity(id, user.userId, "workflow_run_started", { payload }, user.email);
 
-    // Call execution service
-    const EXECUTION_SERVICE_URL = process.env.EXECUTION_SERVICE_URL || "http://localhost:3003";
-    const execResponse = await fetch(`${EXECUTION_SERVICE_URL}/execute`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        workflowId: id,
-        userId: user.userId,
-        workflowName: workflow.name,
-        slackWebhook: (workflow as any).slackWebhook || undefined,
-        workflowJson: { nodes, edges },
-      }),
-    });
-
-    const execData = await execResponse.json();
-
-    if (!execResponse.ok) {
-      throw new AppError(execResponse.status, (execData as any).message || "Execution failed");
-    }
-
-    // Notify Slack if configured (execution-service will handle step-by-step updates)
-    if ((workflow as any).slackWebhook) {
-      notifySlackUserAction((workflow as any).slackWebhook, {
-        action: "workflow_run_started",
-        userName: user.email || "Unknown",
-        workflowName: workflow.name,
-      });
-    }
-
+    // TODO: Integrate with execution service
+    // For now, just return success
     res.json({
       message: "Workflow execution started",
-      jobId: (execData as any).jobId,
+      runId: `run_${Date.now()}`,
       workflowId: id,
-      status: "running",
+      status: "running"
     });
   } catch (error) {
     next(error);

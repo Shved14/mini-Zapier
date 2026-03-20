@@ -1,5 +1,4 @@
 import { BaseExecutor } from "./base.executor";
-import { TriggerExecutor } from "./trigger.executor";
 import { HttpExecutor } from "./http.executor";
 import { TelegramExecutor } from "./telegram.executor";
 import { EmailExecutor } from "./email.executor";
@@ -12,7 +11,6 @@ function register(executor: BaseExecutor): void {
   executors.set(executor.type, executor);
 }
 
-register(new TriggerExecutor());
 register(new HttpExecutor());
 register(new TelegramExecutor());
 register(new EmailExecutor());

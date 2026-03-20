@@ -121,9 +121,8 @@ export const NotificationBell: React.FC = () => {
             {notifications.map((n) => (
               <div
                 key={n.id}
-                className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
-                  !n.read ? "bg-purple-500/5" : ""
-                }`}
+                className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${!n.read ? "bg-purple-500/5" : ""
+                  }`}
               >
                 <div className="flex items-start gap-2">
                   {!n.read && <div className="w-2 h-2 mt-1.5 rounded-full bg-purple-500 shrink-0" />}

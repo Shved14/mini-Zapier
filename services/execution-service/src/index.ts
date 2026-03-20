@@ -38,10 +38,10 @@ app.get("/health", async (_req, res) => {
 // API routes
 app.use("/api/runs", runRoutes);
 
-// Execute endpoint - called by workflow-service
+// Legacy endpoints
 app.post("/execute", async (req, res) => {
   try {
-    const { workflowId, userId, workflowJson, workflowName, slackWebhook } = req.body;
+    const { workflowId, userId, workflowJson } = req.body as WorkflowJobData;
 
     if (!workflowId || !userId || !workflowJson) {
       res.status(400).json({ message: "workflowId, userId, and workflowJson are required" });
@@ -52,11 +52,9 @@ app.post("/execute", async (req, res) => {
       workflowId,
       userId,
       workflowJson,
-      workflowName: workflowName || "Unnamed Workflow",
-      slackWebhook: slackWebhook || undefined,
     });
 
-    logger.info(`Job enqueued`, { jobId: job.id, workflowId, workflowName });
+    logger.info(`Job enqueued`, { jobId: job.id, workflowId });
 
     res.status(202).json({
       message: "Workflow execution queued",

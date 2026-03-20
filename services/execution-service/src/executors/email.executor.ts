@@ -1,5 +1,5 @@
+import nodemailer from "nodemailer";
 import { BaseExecutor, ExecutorResult } from "./base.executor";
-import { logger } from "../utils/logger";
 
 export class EmailExecutor extends BaseExecutor {
   readonly type = "email";
@@ -17,36 +17,28 @@ export class EmailExecutor extends BaseExecutor {
   }
 
   async execute(config: Record<string, unknown>, _input: unknown): Promise<ExecutorResult> {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      return { success: false, error: "RESEND_API_KEY not configured" };
-    }
+    const smtpHost = (config.smtpHost as string) || process.env.SMTP_HOST || "smtp.gmail.com";
+    const smtpPort = (config.smtpPort as number) || Number(process.env.SMTP_PORT) || 587;
+    const smtpUser = (config.smtpUser as string) || process.env.SMTP_USER || "";
+    const smtpPass = (config.smtpPass as string) || process.env.SMTP_PASS || "";
 
-    const from = (config.from as string) || "onboarding@resend.dev";
-    const to = config.to as string;
-    const subject = config.subject as string;
-    const body = config.body as string;
-
-    logger.info(`Sending email via Resend to: ${to}`);
-
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from, to: [to], subject, html: body }),
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: smtpUser ? { user: smtpUser, pass: smtpPass } : undefined,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return { success: false, error: `Resend API error: ${(data as any).message || response.statusText}` };
-    }
+    const info = await transporter.sendMail({
+      from: (config.from as string) || smtpUser,
+      to: config.to as string,
+      subject: config.subject as string,
+      html: config.body as string,
+    });
 
     return {
       success: true,
-      data: { emailId: (data as any).id, to, subject },
+      data: { messageId: info.messageId },
     };
   }
 }

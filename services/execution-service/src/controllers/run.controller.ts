@@ -2,72 +2,40 @@ import { Request, Response, NextFunction } from "express";
 import { workflowQueue } from "../queue/workflow.queue";
 import { logger } from "../utils/logger";
 
-/**
- * Extract step logs from a BullMQ job.
- * The worker stores the WorkflowResult in job.returnvalue which has a `logs` array.
- * Each log entry has: nodeId, type, status ("success"|"failed"), input, output, error, durationMs
- * We map these to the frontend StepLog format.
- */
-function extractSteps(job: any): any[] {
-  const returnVal = job.returnvalue;
-  if (!returnVal || !returnVal.logs) return [];
-
-  return returnVal.logs.map((log: any, index: number) => ({
-    id: `${job.id}-step-${index}`,
-    nodeId: log.nodeId,
-    nodeType: log.type,
-    status: log.status === "success" ? "completed" : "failed",
-    input: log.input,
-    output: log.output,
-    error: log.error || null,
-    startedAt: log.startedAt || null,
-    finishedAt: log.finishedAt || null,
-    duration: log.durationMs,
-  }));
-}
-
-function getJobStatus(job: any): string {
-  if (job.failedReason) return "failed";
-  if (job.finishedOn && job.returnvalue?.status === "failed") return "failed";
-  if (job.finishedOn) return "completed";
-  if (job.processedOn) return "running";
-  return "pending";
-}
-
 export async function getRuns(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const user = (req as any).user;
 
-    const [waiting, active, completed, failed] = await Promise.all([
-      workflowQueue.getWaiting(),
-      workflowQueue.getActive(),
-      workflowQueue.getCompleted(),
-      workflowQueue.getFailed(),
-    ]);
+    // Get all jobs for the user
+    const waiting = await workflowQueue.getWaiting();
+    const active = await workflowQueue.getActive();
+    const completed = await workflowQueue.getCompleted();
+    const failed = await workflowQueue.getFailed();
 
+    // Filter jobs by user (assuming user data is stored in job data)
     const allJobs = [...waiting, ...active, ...completed, ...failed];
     const userJobs = allJobs.filter(job => {
-      return (job.data as any).userId === user.userId;
+      const jobData = job.data as any;
+      return jobData.userId === user.userId;
     });
 
     const runs = userJobs.map(job => {
       const jobData = job.data as any;
-      const steps = extractSteps(job);
       return {
         id: job.id?.toString(),
         workflowId: jobData.workflowId,
-        workflowName: jobData.workflowName || jobData.workflowJson?.name || "Unnamed Workflow",
+        workflowName: jobData.workflowName || 'Unknown Workflow',
         status: getJobStatus(job),
         startedAt: job.timestamp ? new Date(job.timestamp).toISOString() : null,
         finishedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : null,
-        progress: steps.length > 0
-          ? Math.round((steps.filter((s: any) => s.status === "completed").length / steps.length) * 100)
-          : (job.finishedOn ? 100 : 0),
-        error: job.failedReason || job.returnvalue?.logs?.find((l: any) => l.error)?.error || null,
-        steps,
+        progress: job.progress || 0,
+        result: job.returnvalue || null,
+        error: job.failedReason || null,
+        steps: jobData.steps || []
       };
     });
 
+    // Sort by startedAt descending
     runs.sort((a, b) => {
       if (!a.startedAt) return 1;
       if (!b.startedAt) return -1;
@@ -86,8 +54,19 @@ export async function getRunById(req: Request, res: Response, next: NextFunction
     const user = (req as any).user;
     const { id } = req.params;
 
-    // Use getJob for direct lookup (more efficient than scanning all queues)
-    let job = await workflowQueue.getJob(id);
+    // Try to find the job in all queues
+    let job = null;
+    const queues = [
+      await workflowQueue.getWaiting(),
+      await workflowQueue.getActive(),
+      await workflowQueue.getCompleted(),
+      await workflowQueue.getFailed()
+    ];
+
+    for (const queueJobs of queues) {
+      job = queueJobs.find(j => j.id?.toString() === id);
+      if (job) break;
+    }
 
     if (!job) {
       res.status(404).json({ message: "Run not found" });
@@ -96,28 +75,24 @@ export async function getRunById(req: Request, res: Response, next: NextFunction
 
     const jobData = job.data as any;
 
+    // Check if user has access to this run
     if (jobData.userId !== user.userId) {
       res.status(403).json({ message: "Access denied" });
       return;
     }
 
-    const steps = extractSteps(job);
-
     const run = {
       id: job.id?.toString(),
       workflowId: jobData.workflowId,
-      workflowName: jobData.workflowName || jobData.workflowJson?.name || "Unnamed Workflow",
+      workflowName: jobData.workflowName || 'Unknown Workflow',
       status: getJobStatus(job),
       startedAt: job.timestamp ? new Date(job.timestamp).toISOString() : null,
       finishedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : null,
-      progress: steps.length > 0
-        ? Math.round((steps.filter((s: any) => s.status === "completed").length / steps.length) * 100)
-        : (job.finishedOn ? 100 : 0),
-      error: job.failedReason || job.returnvalue?.logs?.find((l: any) => l.error)?.error || null,
-      steps,
-      logs: job.returnvalue?.logs?.map((l: any) =>
-        `[${l.status}] ${l.type}:${l.nodeId} (${l.durationMs}ms)${l.error ? ' - ' + l.error : ''}`
-      ) || [],
+      progress: job.progress || 0,
+      result: job.returnvalue || null,
+      error: job.failedReason || null,
+      steps: jobData.steps || [],
+      logs: jobData.logs || []
     };
 
     res.json(run);
@@ -125,4 +100,11 @@ export async function getRunById(req: Request, res: Response, next: NextFunction
     logger.error("Failed to get run by ID:", error);
     next(error);
   }
+}
+
+function getJobStatus(job: any): string {
+  if (job.failedReason) return "failed";
+  if (job.finishedOn) return "completed";
+  if (job.progress > 0) return "running";
+  return "pending";
 }

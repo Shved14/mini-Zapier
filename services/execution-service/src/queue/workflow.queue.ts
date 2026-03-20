@@ -19,8 +19,6 @@ export const workflowQueue = new Queue(WORKFLOW_QUEUE_NAME, {
 export interface WorkflowJobData {
   workflowId: string;
   userId: string;
-  workflowName?: string;
-  slackWebhook?: string;
   workflowJson: {
     nodes: WorkflowNode[];
     edges: WorkflowEdge[];

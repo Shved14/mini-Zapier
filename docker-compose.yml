@@ -1,146 +1,260 @@
 services:
+
   # ── Infrastructure ──
+
   postgres:
+
     image: postgres:16
+
     container_name: mz-postgres
+
     environment:
+
       POSTGRES_USER: postgres
+
       POSTGRES_PASSWORD: postgres
+
       POSTGRES_DB: mini_zapier
+
     ports:
+
       - "5433:5432"
+
     volumes:
+
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
+
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+
       interval: 5s
+
       timeout: 3s
+
       retries: 10
 
   redis:
+
     image: redis:7-alpine
+
     container_name: mz-redis
+
     ports:
+
       - "6379:6379"
+
     command: [ "redis-server", "--appendonly", "yes" ]
+
     volumes:
+
       - redis_data:/data
 
   # ── Auth Service (3001) ──
+
   auth-service:
+
     build: ./services/auth-service
+
     container_name: mz-auth
+
     ports:
+
       - "3001:3001"
+
     environment:
+
       PORT: 3001
+
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=auth
+
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
+
       JWT_EXPIRES_IN: ${JWT_EXPIRATION:-7d}
+
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3007}
-      RESEND_API_KEY: ${RESEND_API_KEY}
-      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3000/api/auth/google/callback}
+
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+
       GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-http://localhost:3000/api/auth/github/callback}
+
     depends_on:
+
       postgres:
+
         condition: service_healthy
 
   # ── Workflow Service (3002) ──
+
   workflow-service:
+
     build: ./services/workflow-service
+
     container_name: mz-workflow
+
     ports:
+
       - "3002:3002"
+
     environment:
+
       PORT: 3002
+
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=workflow
+
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
-      EXECUTION_SERVICE_URL: http://execution-service:3003
+
     depends_on:
+
       postgres:
+
         condition: service_healthy
 
   # ── Execution Service (3003) ──
+
   execution-service:
+
     build: ./services/execution-service
+
     container_name: mz-execution
+
     ports:
+
       - "3003:3003"
+
     environment:
+
       PORT: 3003
+
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
-      RESEND_API_KEY: ${RESEND_API_KEY}
+
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
+
       - redis
 
   # ── Notification Service (3006) ──
+
   notification-service:
+
     build: ./services/notification-service
+
     container_name: mz-notification
+
     ports:
+
       - "3006:3006"
+
     environment:
+
       PORT: 3006
+
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=notification
+
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
+
       SMTP_HOST: ${SMTP_HOST:-}
+
       SMTP_PORT: ${SMTP_PORT:-587}
+
       SMTP_USER: ${SMTP_USER:-}
+
       SMTP_PASS: ${SMTP_PASS:-}
+
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+
     depends_on:
+
       postgres:
+
         condition: service_healthy
 
   # ── Realtime Service (3010) ──
+
   realtime-service:
+
     build: ./services/realtime-service
+
     container_name: mz-realtime
+
     ports:
+
       - "3010:3010"
+
     environment:
+
       PORT: 3010
+
       CORS_ORIGIN: http://localhost:3007
 
   # ── API Gateway (3000) ──
+
   api-gateway:
+
     build: ./services/api-gateway
+
     container_name: mz-gateway
+
     ports:
+
       - "3000:3000"
+
     environment:
+
       PORT: 3000
+
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
+
       AUTH_SERVICE_URL: http://auth-service:3001
+
       WORKFLOW_SERVICE_URL: http://workflow-service:3002
+
       EXECUTION_SERVICE_URL: http://execution-service:3003
+
       NOTIFICATION_SERVICE_URL: http://notification-service:3006
+
       REALTIME_SERVICE_URL: http://realtime-service:3010
+
     depends_on:
+
       - auth-service
+
       - workflow-service
+
       - execution-service
+
       - notification-service
+
       - realtime-service
 
   # ── Frontend (3007) ──
+
   frontend:
+
     build: ./frontend
+
     container_name: mz-frontend
+
     ports:
+
       - "3007:3007"
+
     depends_on:
+
       - api-gateway
 
 volumes:
+
   postgres_data:
+
   redis_data:
 
 

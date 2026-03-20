@@ -15,33 +15,30 @@ export const RunDetailPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
 
-    let mounted = true;
-
-    const fetchRun = async (isInitial = false) => {
-      if (isInitial) setLoading(true);
+    const fetchRun = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const data = await runsApi.get(id);
-        if (mounted) {
-          setRun(data);
-          setError(null);
-        }
+        setRun(data);
       } catch (err: any) {
-        if (mounted) setError(err.response?.data?.message || "Failed to fetch run details");
+        setError(err.response?.data?.message || "Failed to fetch run details");
       } finally {
-        if (mounted && isInitial) setLoading(false);
+        setLoading(false);
       }
     };
 
-    fetchRun(true);
+    fetchRun();
 
-    // Always auto-refresh every 3s
-    const interval = setInterval(() => fetchRun(false), 3000);
+    // Auto-refresh for running runs
+    const interval = setInterval(() => {
+      if (run?.status === "running") {
+        fetchRun();
+      }
+    }, 2000);
 
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, [id]);
+    return () => clearInterval(interval);
+  }, [id, run?.status]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -132,12 +129,12 @@ export const RunDetailPage: React.FC = () => {
           <p className="text-sm text-gray-400">Run ID: {run.id}</p>
         </div>
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border ${run.status === "completed"
-          ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
-          : run.status === "failed"
-            ? "bg-red-500/10 text-red-300 border-red-500/20"
-            : run.status === "running"
-              ? "bg-blue-500/10 text-blue-300 border-blue-500/20"
-              : "bg-gray-500/10 text-gray-300 border-gray-500/20"
+            ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+            : run.status === "failed"
+              ? "bg-red-500/10 text-red-300 border-red-500/20"
+              : run.status === "running"
+                ? "bg-blue-500/10 text-blue-300 border-blue-500/20"
+                : "bg-gray-500/10 text-gray-300 border-gray-500/20"
           }`}>
           {getStatusIcon(run.status)}
           <span className="capitalize">{run.status}</span>
@@ -188,12 +185,12 @@ export const RunDetailPage: React.FC = () => {
               {/* Step indicator */}
               <div className="flex flex-col items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${step.status === "completed"
-                  ? "bg-emerald-500 text-white"
-                  : step.status === "failed"
-                    ? "bg-red-500 text-white"
-                    : step.status === "running"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-600 text-gray-300"
+                    ? "bg-emerald-500 text-white"
+                    : step.status === "failed"
+                      ? "bg-red-500 text-white"
+                      : step.status === "running"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-600 text-gray-300"
                   }`}>
                   {step.status === "completed" ? "✓" :
                     step.status === "failed" ? "✗" :
@@ -201,7 +198,7 @@ export const RunDetailPage: React.FC = () => {
                 </div>
                 {index < run.steps.length - 1 && (
                   <div className={`w-0.5 h-8 mt-2 ${step.status === "completed" ? "bg-emerald-500" :
-                    step.status === "failed" ? "bg-red-500" : "bg-gray-600"
+                      step.status === "failed" ? "bg-red-500" : "bg-gray-600"
                     }`} />
                 )}
               </div>
@@ -218,12 +215,12 @@ export const RunDetailPage: React.FC = () => {
                     </div>
                   </div>
                   <div className={`px-2 py-1 rounded-full text-xs border ${step.status === "completed"
-                    ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
-                    : step.status === "failed"
-                      ? "bg-red-500/10 text-red-300 border-red-500/20"
-                      : step.status === "running"
-                        ? "bg-blue-500/10 text-blue-300 border-blue-500/20"
-                        : "bg-gray-500/10 text-gray-300 border-gray-500/20"
+                      ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                      : step.status === "failed"
+                        ? "bg-red-500/10 text-red-300 border-red-500/20"
+                        : step.status === "running"
+                          ? "bg-blue-500/10 text-blue-300 border-blue-500/20"
+                          : "bg-gray-500/10 text-gray-300 border-gray-500/20"
                     }`}>
                     {step.status}
                   </div>
@@ -260,7 +257,7 @@ export const RunDetailPage: React.FC = () => {
                         Explain error
                       </button>
                     </div>
-                    <pre className="text-xs text-red-200 whitespace-pre-wrap">{String(step.error)}</pre>
+                    <pre className="text-xs text-red-200 whitespace-pre-wrap">{step.error}</pre>
                   </div>
                 )}
 
@@ -274,7 +271,7 @@ export const RunDetailPage: React.FC = () => {
                           Input Data
                         </summary>
                         <pre className="mt-1 p-2 bg-black/30 rounded text-xs text-slate-300 overflow-x-auto">
-                          {JSON.stringify(step.input as any, null, 2)}
+                          {JSON.stringify(step.input, null, 2)}
                         </pre>
                       </details>
                     )}
@@ -286,7 +283,7 @@ export const RunDetailPage: React.FC = () => {
                           Output Data
                         </summary>
                         <pre className="mt-1 p-2 bg-black/30 rounded text-xs text-slate-300 overflow-x-auto">
-                          {JSON.stringify(step.output as any, null, 2)}
+                          {JSON.stringify(step.output, null, 2)}
                         </pre>
                       </details>
                     )}
