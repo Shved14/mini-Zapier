@@ -1,6 +1,5 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Zap, LayoutDashboard, Play, BarChart3, User, LogOut } from "lucide-react";
-import { useThemeStore } from "../store/useThemeStore";
 import { NotificationBell } from "./NotificationBell";
 
 type LayoutProps = {
@@ -25,17 +24,6 @@ export const Layout: React.FC<LayoutProps> = ({
   onBackToLanding,
   onLogout,
 }) => {
-  const { theme, toggleTheme } = useThemeStore();
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  }, [theme]);
 
   return (
     <div className="min-h-screen flex bg-slate-950 text-slate-50">
@@ -67,8 +55,8 @@ export const Layout: React.FC<LayoutProps> = ({
               <button
                 key={item.id}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
-                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm"
-                    : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
+                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm"
+                  : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
                   }`}
                 onClick={() => onChangePage(item.id)}
               >
@@ -98,12 +86,6 @@ export const Layout: React.FC<LayoutProps> = ({
           </h2>
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <button
-              onClick={toggleTheme}
-              className="px-3 py-1.5 text-xs rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-            >
-              {theme === "dark" ? "Light" : "Dark"}
-            </button>
           </div>
         </header>
         <section className="flex-1 p-6 overflow-y-auto">

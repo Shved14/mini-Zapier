@@ -42,16 +42,16 @@ export const AiExplainModal: React.FC<AiExplainModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="theme-card border theme-border rounded-xl w-full max-w-lg shadow-2xl theme-transition"
+        className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-lg shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b theme-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-purple-400" />
-            <span className="font-semibold theme-text">AI Error Explanation</span>
+            <span className="font-semibold text-white">AI Error Explanation</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 theme-text-muted transition-colors">
+          <button onClick={onClose} className="p-1 rounded hover:bg-white/10 text-gray-400 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -67,7 +67,7 @@ export const AiExplainModal: React.FC<AiExplainModalProps> = ({
           {loading && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
-              <span className="ml-2 text-sm theme-text-muted">Analyzing error...</span>
+              <span className="ml-2 text-sm text-slate-400">Analyzing error...</span>
             </div>
           )}
 
@@ -85,7 +85,7 @@ export const AiExplainModal: React.FC<AiExplainModalProps> = ({
                   <Lightbulb className="w-4 h-4 text-purple-400" />
                   <span className="text-sm font-medium text-purple-300">What went wrong</span>
                 </div>
-                <p className="text-sm theme-text-secondary leading-relaxed">{result.explanation}</p>
+                <p className="text-sm text-slate-200 leading-relaxed">{result.explanation}</p>
               </div>
 
               {/* Suggested fix */}
@@ -94,14 +94,14 @@ export const AiExplainModal: React.FC<AiExplainModalProps> = ({
                   <Wrench className="w-4 h-4 text-emerald-400" />
                   <span className="text-sm font-medium text-emerald-300">Suggested Fix</span>
                 </div>
-                <p className="text-sm theme-text-secondary leading-relaxed">{result.fix}</p>
+                <p className="text-sm text-slate-200 leading-relaxed">{result.fix}</p>
               </div>
             </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-5 py-3 border-t theme-border">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-slate-800">
           {result && (
             <button
               onClick={handleExplain}
@@ -113,7 +113,7 @@ export const AiExplainModal: React.FC<AiExplainModalProps> = ({
           )}
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-slate-800 theme-text-secondary hover:bg-gray-200 dark:hover:bg-slate-700 border theme-border transition-colors"
+            className="px-3 py-1.5 text-xs rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 transition-colors"
           >
             Close
           </button>

@@ -131,12 +131,12 @@ const Skeleton: React.FC = () => (
   <div className="space-y-6 animate-pulse">
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="theme-card border theme-border rounded-2xl p-6">
+        <div key={i} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-slate-800" />
+            <div className="w-12 h-12 rounded-xl bg-slate-800" />
             <div className="space-y-2">
-              <div className="w-24 h-4 bg-gray-200 dark:bg-slate-800 rounded" />
-              <div className="w-16 h-6 bg-gray-200 dark:bg-slate-800 rounded" />
+              <div className="w-24 h-4 bg-slate-800 rounded" />
+              <div className="w-16 h-6 bg-slate-800 rounded" />
             </div>
           </div>
         </div>
@@ -144,19 +144,19 @@ const Skeleton: React.FC = () => (
     </div>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {[...Array(2)].map((_, i) => (
-        <div key={i} className="theme-card border theme-border rounded-2xl p-6">
-          <div className="w-32 h-6 bg-gray-200 dark:bg-slate-800 rounded mb-4" />
-          <div className="w-full h-64 bg-gray-100 dark:bg-slate-800/50 rounded-xl" />
+        <div key={i} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+          <div className="w-32 h-6 bg-slate-800 rounded mb-4" />
+          <div className="w-full h-64 bg-slate-800/50 rounded-xl" />
         </div>
       ))}
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {[...Array(2)].map((_, i) => (
-        <div key={i} className="theme-card border theme-border rounded-2xl p-6">
-          <div className="w-40 h-6 bg-gray-200 dark:bg-slate-800 rounded mb-4" />
+        <div key={i} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+          <div className="w-40 h-6 bg-slate-800 rounded mb-4" />
           <div className="space-y-3">
             {[...Array(5)].map((__, j) => (
-              <div key={j} className="h-12 bg-gray-100 dark:bg-slate-800/50 rounded-lg" />
+              <div key={j} className="h-12 bg-slate-800/50 rounded-lg" />
             ))}
           </div>
         </div>
@@ -180,13 +180,13 @@ const KPICard: React.FC<{
     change > 0 ? "text-emerald-400" : change < 0 ? "text-red-400" : "text-gray-500";
 
   return (
-    <div className="group theme-card backdrop-blur-sm border theme-border rounded-2xl p-5 hover:border-purple-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/[0.04] theme-transition">
+    <div className="group bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-5 hover:border-purple-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/[0.04]">
       <div className="flex items-start justify-between">
         <div className="space-y-3">
-          <p className="text-[13px] font-medium theme-text-secondary tracking-wide uppercase">
+          <p className="text-[13px] font-medium text-slate-400 tracking-wide uppercase">
             {title}
           </p>
-          <p className="text-3xl font-bold theme-text tabular-nums">{value}</p>
+          <p className="text-3xl font-bold text-white tabular-nums">{value}</p>
         </div>
         <div
           className={`w-11 h-11 rounded-xl bg-opacity-10 flex items-center justify-center ${accent}`}
@@ -210,9 +210,9 @@ const KPICard: React.FC<{
 const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="theme-card border theme-border rounded-lg px-3 py-2 shadow-xl">
-      <p className="text-xs theme-text-muted">{label}</p>
-      <p className="text-sm font-semibold theme-text">{payload[0].value} runs</p>
+    <div className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 shadow-xl">
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-sm font-semibold text-white">{payload[0].value} runs</p>
     </div>
   );
 };
@@ -295,17 +295,17 @@ export const StatsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold theme-text flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
             <BarChart3 className="w-7 h-7 text-purple-400" />
             Analytics
           </h1>
-          <p className="theme-text-muted text-sm mt-1">
+          <p className="text-slate-400 text-sm mt-1">
             Monitor your workflow performance
           </p>
         </div>
         <button
           onClick={fetchData}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg theme-card border theme-border text-sm theme-text-secondary hover:theme-text transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-400 hover:text-white transition-colors"
         >
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
@@ -346,8 +346,8 @@ export const StatsPage: React.FC = () => {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Line chart – 2/3 */}
-        <div className="lg:col-span-2 theme-card backdrop-blur-sm border theme-border rounded-2xl p-5 theme-transition">
-          <h3 className="text-sm font-semibold theme-text mb-4">Runs Over Time</h3>
+        <div className="lg:col-span-2 bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold text-white mb-4">Runs Over Time</h3>
           {hasData ? (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={data.runsOverTime}>
@@ -357,7 +357,7 @@ export const StatsPage: React.FC = () => {
                     <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
                 <XAxis dataKey="time" stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 12 }} />
                 <YAxis stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 12 }} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
@@ -379,8 +379,8 @@ export const StatsPage: React.FC = () => {
         </div>
 
         {/* Pie chart – 1/3 */}
-        <div className="theme-card backdrop-blur-sm border theme-border rounded-2xl p-5 theme-transition">
-          <h3 className="text-sm font-semibold theme-text mb-4">Success Rate</h3>
+        <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold text-white mb-4">Success Rate</h3>
           {hasData ? (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
@@ -419,15 +419,15 @@ export const StatsPage: React.FC = () => {
       {/* Bottom row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Performance */}
-        <div className="theme-card backdrop-blur-sm border theme-border rounded-2xl p-5 theme-transition">
-          <h3 className="text-sm font-semibold theme-text mb-4 flex items-center gap-2">
+        <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
             <Clock className="w-4 h-4 text-purple-400" />
             Performance
           </h3>
           <div className="space-y-4">
-            <div className="flex justify-between items-center py-2 border-b theme-border-light">
-              <span className="theme-text-secondary text-sm">Avg Execution Time</span>
-              <span className="theme-text font-semibold tabular-nums text-sm">
+            <div className="flex justify-between items-center py-2 border-b border-slate-800">
+              <span className="text-slate-400 text-sm">Avg Execution Time</span>
+              <span className="text-white font-semibold tabular-nums text-sm">
                 {data.avgExecutionTime > 0
                   ? data.avgExecutionTime > 1000
                     ? `${(data.avgExecutionTime / 1000).toFixed(1)}s`
@@ -435,16 +435,16 @@ export const StatsPage: React.FC = () => {
                   : "—"}
               </span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b theme-border-light">
-              <span className="theme-text-secondary text-sm">Slowest Step</span>
-              <span className="theme-text font-semibold text-sm">
+            <div className="flex justify-between items-center py-2 border-b border-slate-800">
+              <span className="text-slate-400 text-sm">Slowest Step</span>
+              <span className="text-white font-semibold text-sm">
                 {data.slowestStep
                   ? `${data.slowestStep.nodeType} (${(data.slowestStep.duration / 1000).toFixed(1)}s)`
                   : "—"}
               </span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b theme-border-light">
-              <span className="theme-text-secondary text-sm">Success Rate</span>
+            <div className="flex justify-between items-center py-2 border-b border-slate-800">
+              <span className="text-slate-400 text-sm">Success Rate</span>
               <span className="text-emerald-400 font-semibold text-sm">
                 {data.total > 0
                   ? `${((data.successful / data.total) * 100).toFixed(1)}%`
@@ -452,7 +452,7 @@ export const StatsPage: React.FC = () => {
               </span>
             </div>
             <div className="flex justify-between items-center py-2">
-              <span className="theme-text-secondary text-sm">Failure Rate</span>
+              <span className="text-slate-400 text-sm">Failure Rate</span>
               <span className="text-red-400 font-semibold text-sm">
                 {data.total > 0
                   ? `${((data.failed / data.total) * 100).toFixed(1)}%`
@@ -463,8 +463,8 @@ export const StatsPage: React.FC = () => {
         </div>
 
         {/* Recent Activity */}
-        <div className="theme-card backdrop-blur-sm border theme-border rounded-2xl p-5 theme-transition">
-          <h3 className="text-sm font-semibold theme-text mb-4 flex items-center gap-2">
+        <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4 text-purple-400" />
             Recent Activity
           </h3>
@@ -473,7 +473,7 @@ export const StatsPage: React.FC = () => {
               {data.recentActivity.slice(0, 10).map((a, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-100 dark:bg-slate-800/40 hover:bg-gray-200 dark:hover:bg-slate-800/70 transition-colors"
+                  className="flex items-center gap-3 p-2.5 rounded-lg bg-slate-800/40 hover:bg-slate-800/70 transition-colors"
                 >
                   <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 flex items-center justify-center">
                     <span className="text-[11px] text-purple-300 font-bold">
@@ -481,8 +481,8 @@ export const StatsPage: React.FC = () => {
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="theme-text text-sm truncate">{a.action}</p>
-                    <p className="theme-text-muted text-xs">
+                    <p className="text-white text-sm truncate">{a.action}</p>
+                    <p className="text-slate-400 text-xs">
                       {new Date(a.time).toLocaleString()}
                     </p>
                   </div>
