@@ -4,7 +4,7 @@ import { Layout } from "./components/Layout";
 import { WorkflowsPage } from "./pages/WorkflowsPage";
 import { WorkflowDetailPage } from "./pages/WorkflowDetailPage";
 import { RunsPage } from "./pages/RunsPage";
-import { RunDetailsPage } from "./pages/RunDetailsPage";
+import { RunDetailPage } from "./pages/RunDetailPage";
 import { StatsPage } from "./pages/StatsPage";
 import { LandingPage } from "./pages/LandingPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -87,13 +87,9 @@ const ProtectedRoutes: React.FC = () => {
         <Route path="/workflows/:id" element={<WorkflowDetailPage />} />
         <Route
           path="/runs"
-          element={
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <RunsPage onSelectRun={setSelectedRunId} />
-              <RunDetailsPage runId={selectedRunId} />
-            </div>
-          }
+          element={<RunsPage onSelectRun={(id) => navigate(`/runs/${id}`)} />}
         />
+        <Route path="/runs/:id" element={<RunDetailPage />} />
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/workflows" replace />} />

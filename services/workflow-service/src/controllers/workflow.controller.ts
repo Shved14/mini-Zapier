@@ -194,18 +194,58 @@ export async function run(
   try {
     const user = (req as any).user;
     const { id } = req.params;
-    const payload = req.body;
+
+    // Get the workflow with its full JSON
+    const workflow = await getWorkflowById(id, user.userId);
+
+    if (!workflow.workflowJson) {
+      res.status(400).json({ message: "Workflow has no configuration" });
+      return;
+    }
+
+    const wfJson = workflow.workflowJson as any;
+    const nodes = (wfJson.nodes || []).map((n: any) => ({
+      id: n.id,
+      type: n.type || n.data?.type || "unknown",
+      config: n.data?.config || n.config || {},
+    }));
+    const edges = (wfJson.edges || []).map((e: any) => ({
+      source: e.source,
+      target: e.target,
+    }));
 
     // Log workflow run start
-    await logActivity(id, user.userId, "workflow_run_started", { payload }, user.email);
+    await logActivity(id, user.userId, "workflow_run_started", {}, user.email);
 
-    // TODO: Integrate with execution service
-    // For now, just return success
+    // Call execution service
+    const EXECUTION_SERVICE_URL = process.env.EXECUTION_SERVICE_URL || "http://localhost:3003";
+    const execResponse = await fetch(`${EXECUTION_SERVICE_URL}/execute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workflowId: id,
+        userId: user.userId,
+        workflowName: workflow.name,
+        workflowJson: { nodes, edges },
+      }),
+    });
+
+    const execData = await execResponse.json();
+
+    if (!execResponse.ok) {
+      throw new AppError(execResponse.status, (execData as any).message || "Execution failed");
+    }
+
+    // Notify Slack if configured
+    if ((workflow as any).slackWebhook) {
+      notifySlack((workflow as any).slackWebhook, "Workflow Run Started", `'${workflow.name}' execution started`);
+    }
+
     res.json({
       message: "Workflow execution started",
-      runId: `run_${Date.now()}`,
+      jobId: (execData as any).jobId,
       workflowId: id,
-      status: "running"
+      status: "running",
     });
   } catch (error) {
     next(error);

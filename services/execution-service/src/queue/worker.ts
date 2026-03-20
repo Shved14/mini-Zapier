@@ -15,10 +15,8 @@ export function startWorker(): Worker {
 
       const result = await runWorkflow(job.data);
 
-      if (result.status === "failed") {
-        throw new Error(`Workflow ${job.data.workflowId} failed: ${result.logs[result.logs.length - 1]?.error}`);
-      }
-
+      // Always return the result (even on failure) so steps/logs are preserved
+      // in job.returnvalue for the Runs UI to display
       return result;
     },
     {

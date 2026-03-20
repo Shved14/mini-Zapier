@@ -8,12 +8,15 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  passwordHash String?
-  provider     String   @default("local")
-  createdAt    DateTime @default(now())
+  id                        String    @id @default(cuid())
+  email                     String    @unique
+  name                      String?
+  passwordHash              String?
+  provider                  String    @default("local")
+  emailVerified             Boolean   @default(false)
+  verificationCode          String?
+  verificationCodeExpires   DateTime?
+  createdAt                 DateTime  @default(now())
 
   @@map("users")
 }

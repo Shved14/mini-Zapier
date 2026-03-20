@@ -7,6 +7,7 @@ import { workflowQueue, WorkflowJobData } from "./queue/workflow.queue";
 import { startWorker } from "./queue/worker";
 import { getRegisteredTypes } from "./executors/registry";
 import { logger } from "./utils/logger";
+import runRoutes from "./routes/run.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -14,6 +15,7 @@ const PORT = process.env.PORT || 3003;
 app.use(cors());
 app.use(express.json());
 
+// Health check
 app.get("/health", async (_req, res) => {
   try {
     const waiting = await workflowQueue.getWaitingCount();
@@ -32,9 +34,13 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+// API routes
+app.use("/api/runs", runRoutes);
+
+// Execute endpoint - called by workflow-service
 app.post("/execute", async (req, res) => {
   try {
-    const { workflowId, userId, workflowJson } = req.body as WorkflowJobData;
+    const { workflowId, userId, workflowJson, workflowName } = req.body;
 
     if (!workflowId || !userId || !workflowJson) {
       res.status(400).json({ message: "workflowId, userId, and workflowJson are required" });
@@ -45,9 +51,10 @@ app.post("/execute", async (req, res) => {
       workflowId,
       userId,
       workflowJson,
-    });
+      workflowName: workflowName || "Unnamed Workflow",
+    } as any);
 
-    logger.info(`Job enqueued`, { jobId: job.id, workflowId });
+    logger.info(`Job enqueued`, { jobId: job.id, workflowId, workflowName });
 
     res.status(202).json({
       message: "Workflow execution queued",

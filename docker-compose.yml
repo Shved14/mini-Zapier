@@ -38,6 +38,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
       JWT_EXPIRES_IN: ${JWT_EXPIRATION:-7d}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3007}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3000/api/auth/google/callback}
@@ -58,6 +60,7 @@ services:
       PORT: 3002
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mini_zapier?schema=workflow
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
+      EXECUTION_SERVICE_URL: http://execution-service:3003
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,6 +74,8 @@ services:
     environment:
       PORT: 3003
       REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
+      RESEND_API_KEY: ${RESEND_API_KEY}
     depends_on:
       - redis
 

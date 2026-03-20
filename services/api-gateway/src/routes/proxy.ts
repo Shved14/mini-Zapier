@@ -56,13 +56,12 @@ router.use("/auth/me", validateJwt, serviceProxy(AUTH_SERVICE_URL, "/auth/me"));
 
 // Protected routes — JWT required, then proxy
 router.use("/workflows", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows"));
-
-// Public invite token routes (no JWT required)
+router.use("/runs", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/api/runs"));
+router.use("/execute", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/execute"));
 router.use("/workflows/invite/:token", serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token"));
 router.post("/workflows/invite/:token/accept", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/accept"));
 router.post("/workflows/invite/:token/decline", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/decline"));
 
-router.use("/execute", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/execute"));
 router.use("/notifications", validateJwt, serviceProxy(NOTIFICATION_SERVICE_URL, "/notifications"));
 
 export default router;

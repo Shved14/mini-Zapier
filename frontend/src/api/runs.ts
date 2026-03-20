@@ -2,36 +2,35 @@ import { api } from "./client";
 
 export type StepLog = {
   id: string;
-  runId: string;
-  stepId: string;
-  stepType: string;
-  status: string;
-  input: unknown;
-  output: unknown;
+  nodeId: string;
+  nodeType: string;
+  status: "pending" | "running" | "completed" | "failed";
+  input?: unknown;
+  output?: unknown;
   error?: string | null;
-  startedAt: string;
-  finishedAt?: string | null;
-  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  duration?: number;
 };
 
 export type WorkflowRun = {
   id: string;
   workflowId: string;
-  status: string;
-  currentNodeId?: string | null;
-  startedAt: string;
-  finishedAt?: string | null;
-  workflow?: {
-    id: string;
-    name: string;
-  };
-  stepLogs?: StepLog[];
+  workflowName: string;
+  status: "pending" | "running" | "completed" | "failed";
+  startedAt: string | null;
+  finishedAt: string | null;
+  progress: number;
+  result?: unknown;
+  error?: string | null;
+  steps: StepLog[];
+  logs?: string[];
 };
 
 export const runsApi = {
   async list(): Promise<WorkflowRun[]> {
-    const res = await api.get<{ items: WorkflowRun[] }>("/runs");
-    return res.data.items ?? res.data as any;
+    const res = await api.get<WorkflowRun[]>("/runs");
+    return res.data;
   },
 
   async get(id: string): Promise<WorkflowRun> {

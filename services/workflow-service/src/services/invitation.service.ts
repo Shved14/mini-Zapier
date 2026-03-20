@@ -155,11 +155,7 @@ export async function declineInvitation(token: string) {
     data: { status: "declined" },
   });
 
-  // Log the activity
-  await logActivity(invitation.workflowId, invitation.workflow.userId, "member_left", {
-    email: invitation.email,
-    role: invitation.role,
-  });
+  // Don't log invitation decline - it's not a real member action
 
   return { message: "Invitation declined" };
 }
@@ -173,21 +169,12 @@ export async function cancelInvitation(invitationId: string) {
     throw new Error("Invitation not found");
   }
 
-  // Get workflow to find owner for logging
-  const workflow = await prisma.workflow.findUnique({
-    where: { id: invitation.workflowId },
-  });
-
   // Delete the invitation
   await prisma.invitation.delete({
     where: { id: invitationId },
   });
 
-  // Log the activity
-  await logActivity(invitation.workflowId, workflow?.userId || "unknown", "member_left", {
-    email: invitation.email,
-    role: invitation.role,
-  });
+  // Don't log invitation cancellation - it's not a real member action
 
   return { message: "Invitation cancelled" };
 }
