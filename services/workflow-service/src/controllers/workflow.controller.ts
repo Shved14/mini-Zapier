@@ -10,7 +10,7 @@ import {
 } from "../services/workflow.service";
 import { logActivity } from "../services/activity.service";
 import { getActivityLogs } from "../services/activity.service";
-import { notifySlack } from "../services/slack.service";
+import { notifySlack, notifySlackUserAction } from "../services/slack.service";
 
 export async function create(
   req: Request,
@@ -115,6 +115,9 @@ export async function update(
       }, user.email);
     }
 
+    const wh = (workflow as any).slackWebhook;
+    const userName = user.email || "Unknown";
+
     if (workflowJson && previousWorkflow.workflowJson) {
       const prevJson = typeof previousWorkflow.workflowJson === 'object' ? previousWorkflow.workflowJson as any : {};
       const currJson = typeof workflowJson === 'object' ? workflowJson as any : {};
@@ -132,6 +135,7 @@ export async function update(
           nodeId: node.id,
           nodeType: node.type || 'node'
         }, user.email);
+        notifySlackUserAction(wh, { action: "node_added", userName, workflowName: workflow.name, details: `Node: \`${node.type || 'node'}\` (\`${node.id}\`)` });
       }
 
       for (const node of deletedNodes) {
@@ -139,6 +143,7 @@ export async function update(
           nodeId: node.id,
           nodeType: node.type || 'node'
         }, user.email);
+        notifySlackUserAction(wh, { action: "node_deleted", userName, workflowName: workflow.name, details: `Node: \`${node.type || 'node'}\` (\`${node.id}\`)` });
       }
 
       // Log node config changes
@@ -150,6 +155,7 @@ export async function update(
             nodeType: currNode.type || 'node',
             configField: 'configuration'
           }, user.email);
+          notifySlackUserAction(wh, { action: "node_config_updated", userName, workflowName: workflow.name, details: `Node: \`${currNode.type || 'node'}\` (\`${currNode.id}\`)` });
         }
       }
 
@@ -162,6 +168,7 @@ export async function update(
           source: edge.source,
           target: edge.target
         }, user.email);
+        notifySlackUserAction(wh, { action: "edge_added", userName, workflowName: workflow.name, details: `\`${edge.source}\` → \`${edge.target}\`` });
       }
 
       for (const edge of deletedEdges) {
@@ -169,15 +176,13 @@ export async function update(
           source: edge.source,
           target: edge.target
         }, user.email);
+        notifySlackUserAction(wh, { action: "edge_deleted", userName, workflowName: workflow.name, details: `\`${edge.source}\` → \`${edge.target}\`` });
       }
     }
 
     if (slackWebhook !== undefined) {
       await logActivity(id, user.userId, "settings_updated", { slackWebhook: !!slackWebhook }, user.email);
-    }
-
-    if ((workflow as any).slackWebhook && workflowJson) {
-      notifySlack((workflow as any).slackWebhook, "Workflow Updated", `'${workflow.name}' was updated`);
+      notifySlackUserAction(wh, { action: "settings_updated", userName, workflowName: workflow.name });
     }
 
     res.json(workflow);
@@ -226,6 +231,7 @@ export async function run(
         workflowId: id,
         userId: user.userId,
         workflowName: workflow.name,
+        slackWebhook: (workflow as any).slackWebhook || undefined,
         workflowJson: { nodes, edges },
       }),
     });
@@ -236,9 +242,13 @@ export async function run(
       throw new AppError(execResponse.status, (execData as any).message || "Execution failed");
     }
 
-    // Notify Slack if configured
+    // Notify Slack if configured (execution-service will handle step-by-step updates)
     if ((workflow as any).slackWebhook) {
-      notifySlack((workflow as any).slackWebhook, "Workflow Run Started", `'${workflow.name}' execution started`);
+      notifySlackUserAction((workflow as any).slackWebhook, {
+        action: "workflow_run_started",
+        userName: user.email || "Unknown",
+        workflowName: workflow.name,
+      });
     }
 
     res.json({

@@ -40,7 +40,7 @@ app.use("/api/runs", runRoutes);
 // Execute endpoint - called by workflow-service
 app.post("/execute", async (req, res) => {
   try {
-    const { workflowId, userId, workflowJson, workflowName } = req.body;
+    const { workflowId, userId, workflowJson, workflowName, slackWebhook } = req.body;
 
     if (!workflowId || !userId || !workflowJson) {
       res.status(400).json({ message: "workflowId, userId, and workflowJson are required" });
@@ -52,7 +52,8 @@ app.post("/execute", async (req, res) => {
       userId,
       workflowJson,
       workflowName: workflowName || "Unnamed Workflow",
-    } as any);
+      slackWebhook: slackWebhook || undefined,
+    });
 
     logger.info(`Job enqueued`, { jobId: job.id, workflowId, workflowName });
 
