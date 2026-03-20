@@ -6,11 +6,13 @@ import {
   FileText, Users, Settings, Activity,
 } from "lucide-react";
 import { workflowsApi, Workflow } from "../api/workflows";
+import { useAuthStore } from "../store/useAuthStore";
+import { useWorkflowStore } from "../store/workflowStore";
 import { WorkflowEditor } from "../components/WorkflowEditor";
 import { MembersTab } from "../components/tabs/MembersTab";
 import { LogsTab } from "../components/LogsTab";
 import { SettingsTab } from "../components/tabs/SettingsTab";
-import { useAuthStore } from "../store/useAuthStore";
+import { useConfirmDialog } from "../components/ConfirmDialog";
 
 const tabs = [
   { id: "editor", label: "Editor", icon: FileText },
@@ -25,7 +27,28 @@ export const WorkflowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [workflow, setWorkflow] = useState<Workflow | null>(null);
+  const {
+    currentWorkflow,
+    unsavedChanges,
+    setCurrentWorkflow,
+    setUnsavedChanges,
+    resetEditing
+  } = useWorkflowStore();
+
+  const { showConfirmDialog, ConfirmDialogComponent } = useConfirmDialog();
+
+  const [workflow, setWorkflowState] = useState<Workflow | null>(null);
+
+  // Custom setter that updates both local and global state
+  const setWorkflow = (updatedWorkflow: Workflow | null | ((prev: Workflow | null) => Workflow | null)) => {
+    const newWorkflow = typeof updatedWorkflow === 'function' ? updatedWorkflow(workflow) : updatedWorkflow;
+    setWorkflowState(newWorkflow);
+
+    // Also update global store to keep everything in sync
+    if (newWorkflow && currentWorkflow?.id === newWorkflow.id) {
+      setCurrentWorkflow(newWorkflow);
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("editor");
@@ -224,7 +247,7 @@ export const WorkflowDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Safe tab switching */}
       <div className="px-6 border-b border-white/10 bg-slate-900/20 flex gap-0 shrink-0">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -232,7 +255,19 @@ export const WorkflowDetailPage: React.FC = () => {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={async () => {
+                if (unsavedChanges && activeTab === "editor" && tab.id !== "editor") {
+                  const confirmed = await showConfirmDialog(
+                    "Подтвердите действие",
+                    "У вас есть несохраненные изменения. Вы уверены, что хотите переключить вкладку?"
+                  );
+                  if (confirmed) {
+                    setActiveTab(tab.id);
+                  }
+                } else {
+                  setActiveTab(tab.id);
+                }
+              }}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${isActive
                 ? "border-purple-500 text-white"
                 : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600"
@@ -250,8 +285,10 @@ export const WorkflowDetailPage: React.FC = () => {
         {activeTab === "editor" && (
           <WorkflowEditor
             workflow={workflow}
-            initialWorkflowJson={workflow.workflowJson}
             onClose={() => navigate("/workflows")}
+            onSave={(workflowJson) => {
+              setWorkflow((prev) => prev ? { ...prev, workflowJson } : prev);
+            }}
             embedded
           />
         )}
@@ -261,32 +298,37 @@ export const WorkflowDetailPage: React.FC = () => {
       </div>
 
       {/* Delete confirmation */}
-      {showDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-md mx-4 p-6 rounded-2xl glass border border-white/10"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
-                <Trash2 className="h-5 w-5 text-red-400" />
+      {
+        showDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-full max-w-md mx-4 p-6 rounded-2xl glass border border-white/10"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+                  <Trash2 className="h-5 w-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Delete workflow</h3>
+                  <p className="text-sm text-gray-400">This action cannot be undone</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">Delete workflow</h3>
-                <p className="text-sm text-gray-400">This action cannot be undone</p>
+              <p className="text-gray-300 mb-6">
+                Delete <span className="font-medium text-white">{workflow.name}</span>?
+              </p>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowDelete(false)} disabled={deleting} className="px-4 py-2 rounded-lg glass border border-white/10 hover:bg-white/10 text-white text-sm transition-all disabled:opacity-50">Cancel</button>
+                <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 text-sm transition-all disabled:opacity-50">{deleting ? "Deleting..." : "Delete"}</button>
               </div>
-            </div>
-            <p className="text-gray-300 mb-6">
-              Delete <span className="font-medium text-white">{workflow.name}</span>?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setShowDelete(false)} disabled={deleting} className="px-4 py-2 rounded-lg glass border border-white/10 hover:bg-white/10 text-white text-sm transition-all disabled:opacity-50">Cancel</button>
-              <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 text-sm transition-all disabled:opacity-50">{deleting ? "Deleting..." : "Delete"}</button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </div>
+            </motion.div>
+          </div>
+        )
+      }
+
+      {/* Custom Confirm Dialog */}
+      <ConfirmDialogComponent />
+    </div >
   );
 };

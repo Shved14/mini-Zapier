@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -12,11 +12,13 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { workflowsApi, Workflow } from "../api/workflows";
+import { useWorkflowStore } from "../store/workflowStore";
+import { useConfirmDialog } from "./ConfirmDialog";
 
 type WorkflowEditorProps = {
   workflow: Workflow;
   onClose: () => void;
-  initialWorkflowJson?: any;
+  onSave?: (workflowJson: any) => void;
   embedded?: boolean;
 };
 
@@ -54,54 +56,137 @@ const createNode = (type: string, index: number): Node => ({
   data: { label: nodeTypeLabels[type] ?? type, type, config: defaultConfigs[type] ?? {} },
 });
 
+// Parse workflow JSON into ReactFlow nodes
+function parseNodes(wf: Workflow): Node[] {
+  const raw = ((wf as any).workflowJson?.nodes ?? []) as Array<{
+    id: string;
+    type: string;
+    config?: unknown;
+    position?: { x: number; y: number };
+  }>;
+  return raw.map((n, idx) => ({
+    id: n.id,
+    type: "default",
+    position: n.position ?? { x: 150 + idx * 40, y: 80 + idx * 40 },
+    data: {
+      label: nodeTypeLabels[n.type] ?? n.type,
+      type: n.type,
+      config: n.config ?? {},
+    },
+  }));
+}
+
+// Parse workflow JSON into ReactFlow edges
+function parseEdges(wf: Workflow): Edge[] {
+  const raw = ((wf as any).workflowJson?.edges ?? []) as Array<{
+    source?: string; target?: string; from?: string; to?: string;
+  }>;
+  return raw.map((e, idx) => ({
+    id: `e-${idx}-${e.source || e.from}-${e.target || e.to}`,
+    source: e.source || e.from || "",
+    target: e.target || e.to || "",
+  }));
+}
+
 export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   workflow,
   onClose,
-  initialWorkflowJson,
+  onSave,
   embedded = false,
 }) => {
+  const { setUnsavedChanges } = useWorkflowStore();
+  const { showConfirmDialog, ConfirmDialogComponent } = useConfirmDialog();
+
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [configText, setConfigText] = useState<string>("{}");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | undefined>();
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
-  const initialNodes: Node[] = useMemo(() => {
-    const nodes = (initialWorkflowJson?.nodes ?? []) as Array<{
-      id: string;
-      type: string;
-      config?: unknown;
-    }>;
-    if (!nodes.length) return [];
-    return nodes.map((n, idx) => ({
-      id: n.id,
-      type: "default",
-      position: { x: 150 + idx * 40, y: 80 + idx * 40 },
-      data: {
-        label: nodeTypeLabels[n.type] ?? n.type,
-        type: n.type,
-        config: n.config ?? {},
-      },
-    }));
-  }, [initialWorkflowJson]);
+  // ─── Initialize nodes/edges ONCE from workflow prop ───
+  const [nodes, setNodes, onNodesChange] = useNodesState(parseNodes(workflow));
+  const [edges, setEdges, onEdgesChange] = useEdgesState(parseEdges(workflow));
 
-  const initialEdges: Edge[] = useMemo(() => {
-    const edges = (initialWorkflowJson?.edges ?? []) as Array<{
-      source?: string;
-      target?: string;
-      from?: string;
-      to?: string;
-    }>;
-    return edges.map((e, idx) => ({
-      id: `e-${idx}-${e.source || e.from}-${e.target || e.to}`,
-      source: e.source || e.from || "",
-      target: e.target || e.to || "",
-    }));
-  }, [initialWorkflowJson]);
+  // Track whether user has made changes since last save
+  const hasChanges = useRef(false);
+  // Guard: skip the very first render's auto-save
+  const initialized = useRef(false);
+  // Prevent saving while already saving
+  const isSaving = useRef(false);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // ─── Serialize current state for auto-save dependency ───
+  const nodesJson = useMemo(() => JSON.stringify(
+    nodes.map(n => ({ id: n.id, type: n.data.type, config: n.data.config, position: n.position }))
+  ), [nodes]);
 
+  const edgesJson = useMemo(() => JSON.stringify(
+    edges.map(e => ({ source: e.source, target: e.target }))
+  ), [edges]);
+
+  // ─── Mark dirty whenever nodes/edges actually change ───
+  useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true;
+      return;
+    }
+    hasChanges.current = true;
+    setUnsavedChanges(true);
+    setSaveStatus("idle");
+  }, [nodesJson, edgesJson]);
+
+  // ─── Save function ───
+  const doSave = useCallback(async () => {
+    if (isSaving.current || !hasChanges.current) return;
+    isSaving.current = true;
+    setSaving(true);
+    setSaveError(undefined);
+    setSaveStatus("saving");
+
+    try {
+      const workflowJson = {
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          type: n.data.type,
+          config: n.data.config ?? {},
+          position: n.position,
+        })),
+        edges: edges.map((e) => ({
+          source: e.source,
+          target: e.target,
+        })),
+      };
+
+      await workflowsApi.update(workflow.id, { workflowJson });
+
+      // Mark clean — do NOT reload from server, do NOT call setNodes
+      hasChanges.current = false;
+      setUnsavedChanges(false);
+      setSaveStatus("saved");
+
+      // Notify parent so its workflow state stays fresh for tab switches
+      onSave?.(workflowJson);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to save");
+      setSaveError(msg);
+      setSaveStatus("idle");
+    } finally {
+      setSaving(false);
+      isSaving.current = false;
+    }
+  }, [nodes, edges, workflow.id]);
+
+  // ─── Auto-save with 1.5s debounce, triggered by actual data changes ───
+  useEffect(() => {
+    if (!hasChanges.current) return;
+
+    const timer = setTimeout(() => {
+      doSave();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [nodesJson, edgesJson, doSave]);
+
+  // ─── Node/edge interaction handlers ───
   useEffect(() => {
     if (selectedNode?.data?.config) {
       setConfigText(JSON.stringify(selectedNode.data.config, null, 2));
@@ -109,8 +194,9 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   }, [selectedNode]);
 
   const onConnect = useCallback(
-    (connection: Edge | Connection) =>
-      setEdges((eds) => addEdge(connection, eds)),
+    (connection: Edge | Connection) => {
+      setEdges((eds) => addEdge(connection, eds));
+    },
     [setEdges]
   );
 
@@ -129,76 +215,43 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       setNodes((nds) =>
         nds.map((n) =>
           n.id === selectedNode.id
-            ? {
-              ...n,
-              data: {
-                ...n.data,
-                config: parsed,
-              },
-            }
+            ? { ...n, data: { ...n.data, config: parsed } }
             : n
         )
       );
       setSelectedNode((n) =>
-        n
-          ? {
-            ...n,
-            data: {
-              ...n.data,
-              config: parsed,
-            },
-          }
-          : n
+        n ? { ...n, data: { ...n.data, config: parsed } } : n
       );
       setSaveError(undefined);
     } catch (err) {
-      setSaveError(
-        err instanceof Error ? err.message : "Invalid JSON configuration"
+      setSaveError(err instanceof Error ? err.message : "Invalid JSON configuration");
+    }
+  };
+
+  const handleClose = async () => {
+    if (hasChanges.current) {
+      const confirmed = await showConfirmDialog(
+        "Unsaved changes",
+        "You have unsaved changes. Are you sure you want to close?"
       );
+      if (confirmed) {
+        onClose();
+      }
+    } else {
+      onClose();
     }
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    setSaveError(undefined);
-    setSaveSuccess(false);
-    try {
-      const workflowJson = {
-        nodes: nodes.map((n) => ({
-          id: n.id,
-          type: n.data.type,
-          config: n.data.config ?? {},
-        })),
-        edges: edges.map((e) => ({
-          source: e.source,
-          target: e.target,
-        })),
-      };
-      await workflowsApi.update(workflow.id, { workflowJson });
-      setSaveSuccess(true);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to save workflow");
-      setSaveError(msg);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Auto-save function with debouncing
-  const autoSave = useCallback(() => {
-    if (nodes.length > 0) { // Only auto-save if there are nodes
-      handleSave();
-    }
-  }, [nodes, edges, workflow.id]);
-
-  // Auto-save after changes with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      autoSave();
-    }, 1000); // 1 second debounce
-
-    return () => clearTimeout(timer);
-  }, [autoSave]);
+  // ─── Status label ───
+  const statusLabel = saveError
+    ? <span className="text-xs text-red-400 max-w-xs truncate">{saveError}</span>
+    : saveStatus === "saving"
+      ? <span className="text-xs text-amber-400">Saving...</span>
+      : saveStatus === "saved"
+        ? <span className="text-xs text-emerald-300">Saved</span>
+        : hasChanges.current
+          ? <span className="text-xs text-amber-400">Unsaved changes</span>
+          : null;
 
   const editorContent = (
     <div className={embedded ? "flex flex-col h-full" : "bg-slate-950 border border-slate-800 rounded-xl w-[95vw] h-[90vh] flex flex-col shadow-xl"}>
@@ -213,24 +266,17 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {saveError && (
-              <span className="text-xs text-red-400 max-w-xs truncate">
-                {saveError}
-              </span>
-            )}
-            {saveSuccess && !saveError && (
-              <span className="text-xs text-emerald-300">Saved</span>
-            )}
+            {statusLabel}
             <button
               className="px-3 py-1.5 text-xs rounded-md bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
-              onClick={handleSave}
+              onClick={doSave}
               disabled={saving}
             >
               {saving ? "Saving..." : "Save workflow"}
             </button>
             <button
               className="px-3 py-1.5 text-xs rounded-md border border-slate-700 hover:bg-slate-800"
-              onClick={onClose}
+              onClick={handleClose}
             >
               Close
             </button>
@@ -241,9 +287,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         <div className="px-4 py-2 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
           <span className="text-xs text-slate-400">Drag nodes, connect them, edit configs and save.</span>
           <div className="flex items-center gap-2">
-            {saveError && <span className="text-xs text-red-400 max-w-xs truncate">{saveError}</span>}
-            {saveSuccess && !saveError && <span className="text-xs text-emerald-300">Saved</span>}
-            <button className="px-3 py-1.5 text-xs rounded-md bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50" onClick={handleSave} disabled={saving}>
+            {statusLabel}
+            <button className="px-3 py-1.5 text-xs rounded-md bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50" onClick={doSave} disabled={saving}>
               {saving ? "Saving..." : "Save"}
             </button>
           </div>
@@ -310,11 +355,12 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     </div>
   );
 
-  if (embedded) return editorContent;
+  if (embedded) return <>{editorContent}<ConfirmDialogComponent /></>;
 
   return (
     <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center">
       {editorContent}
+      <ConfirmDialogComponent />
     </div>
   );
 };

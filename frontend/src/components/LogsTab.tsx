@@ -21,6 +21,66 @@ export const LogsTab: React.FC<LogsTabProps> = ({ workflowId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Inject custom scrollbar styles
+  useEffect(() => {
+    const styleId = 'custom-scrollbar-styles';
+    let styleElement = document.getElementById(styleId);
+
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      styleElement.textContent = `
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px !important;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05) !important;
+          border-radius: 4px !important;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(147, 51, 234, 0.5) !important;
+          border-radius: 4px !important;
+          border: 1px solid rgba(147, 51, 234, 0.3) !important;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(147, 51, 234, 0.7) !important;
+          border: 1px solid rgba(147, 51, 234, 0.5) !important;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:active {
+          background: rgba(147, 51, 234, 0.9) !important;
+          border: 1px solid rgba(147, 51, 234, 0.7) !important;
+        }
+        
+        /* Firefox scrollbar styles */
+        .custom-scrollbar {
+          scrollbar-width: thin !important;
+          scrollbar-color: rgba(147, 51, 234, 0.5) rgba(255, 255, 255, 0.05) !important;
+        }
+        
+        .custom-scrollbar:hover {
+          scrollbar-color: rgba(147, 51, 234, 0.7) rgba(255, 255, 255, 0.05) !important;
+        }
+        
+        /* Override Tailwind scrollbar styles */
+        .custom-scrollbar {
+          scrollbar-width: thin !important;
+          -ms-overflow-style: none !important;  /* IE and Edge */
+        }
+      `;
+      document.head.appendChild(styleElement);
+    }
+
+    return () => {
+      if (styleElement && document.head.contains(styleElement)) {
+        document.head.removeChild(styleElement);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     fetchLogs();
   }, [workflowId]);
@@ -101,13 +161,13 @@ export const LogsTab: React.FC<LogsTabProps> = ({ workflowId }) => {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
-    
+
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    
+
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ago`;
   };
@@ -156,7 +216,7 @@ export const LogsTab: React.FC<LogsTabProps> = ({ workflowId }) => {
         <span className="text-sm text-gray-400">{logs.length} actions</span>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-96 overflow-y-auto mx-4 pr-2 custom-scrollbar">
         {logs.map((log, index) => (
           <div
             key={log.id}
@@ -165,7 +225,7 @@ export const LogsTab: React.FC<LogsTabProps> = ({ workflowId }) => {
             <div className={`p-2 rounded-lg border ${getActionColor(log.action)}`}>
               {getActionIcon(log.action)}
             </div>
-            
+
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm mb-1">{log.message}</p>
               <div className="flex items-center gap-4 text-xs text-gray-400">
