@@ -118,7 +118,7 @@ export const TestNodeModal: React.FC<TestNodeModalProps> = ({
             <div className={`p-3 rounded-lg border ${result.success
               ? "bg-emerald-500/10 border-emerald-500/20"
               : "bg-red-500/10 border-red-500/20"
-              }`}>
+            }`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   {result.success ? (

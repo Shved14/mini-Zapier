@@ -15,30 +15,33 @@ export const RunDetailPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
 
-    const fetchRun = async () => {
-      setLoading(true);
-      setError(null);
+    let mounted = true;
+
+    const fetchRun = async (isInitial = false) => {
+      if (isInitial) setLoading(true);
       try {
         const data = await runsApi.get(id);
-        setRun(data);
+        if (mounted) {
+          setRun(data);
+          setError(null);
+        }
       } catch (err: any) {
-        setError(err.response?.data?.message || "Failed to fetch run details");
+        if (mounted) setError(err.response?.data?.message || "Failed to fetch run details");
       } finally {
-        setLoading(false);
+        if (mounted && isInitial) setLoading(false);
       }
     };
 
-    fetchRun();
+    fetchRun(true);
 
-    // Auto-refresh for running runs
-    const interval = setInterval(() => {
-      if (run?.status === "running") {
-        fetchRun();
-      }
-    }, 2000);
+    // Always auto-refresh every 3s
+    const interval = setInterval(() => fetchRun(false), 3000);
 
-    return () => clearInterval(interval);
-  }, [id, run?.status]);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [id]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -120,13 +123,13 @@ export const RunDetailPage: React.FC = () => {
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate("/runs")}
-          className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-secondary transition-colors"
+          className="p-2 rounded-lg hover:bg-white/10 text-gray-400 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1">
-          <h2 className="text-xl font-semibold theme-text">{run.workflowName}</h2>
-          <p className="text-sm theme-text-muted">Run ID: {run.id}</p>
+          <h2 className="text-xl font-semibold text-white">{run.workflowName}</h2>
+          <p className="text-sm text-gray-400">Run ID: {run.id}</p>
         </div>
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border ${run.status === "completed"
           ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
@@ -142,22 +145,22 @@ export const RunDetailPage: React.FC = () => {
       </div>
 
       {/* Run Info */}
-      <div className="grid grid-cols-4 gap-4 p-4 theme-card rounded-lg border theme-border theme-transition">
+      <div className="grid grid-cols-4 gap-4 p-4 bg-slate-900/60 rounded-lg border border-slate-800">
         <div>
-          <div className="text-xs theme-text-muted mb-1">Started</div>
-          <div className="text-sm theme-text">{formatTime(run.startedAt)}</div>
+          <div className="text-xs text-slate-500 mb-1">Started</div>
+          <div className="text-sm text-white">{formatTime(run.startedAt)}</div>
         </div>
         <div>
-          <div className="text-xs theme-text-muted mb-1">Finished</div>
-          <div className="text-sm theme-text">{formatTime(run.finishedAt)}</div>
+          <div className="text-xs text-slate-500 mb-1">Finished</div>
+          <div className="text-sm text-white">{formatTime(run.finishedAt)}</div>
         </div>
         <div>
-          <div className="text-xs theme-text-muted mb-1">Duration</div>
-          <div className="text-sm theme-text">{getDuration(run.startedAt, run.finishedAt)}</div>
+          <div className="text-xs text-slate-500 mb-1">Duration</div>
+          <div className="text-sm text-white">{getDuration(run.startedAt, run.finishedAt)}</div>
         </div>
         <div>
-          <div className="text-xs theme-text-muted mb-1">Progress</div>
-          <div className="text-sm theme-text">{run.progress}%</div>
+          <div className="text-xs text-slate-500 mb-1">Progress</div>
+          <div className="text-sm text-white">{run.progress}%</div>
         </div>
       </div>
 
@@ -174,14 +177,14 @@ export const RunDetailPage: React.FC = () => {
 
       {/* Steps Timeline */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold theme-text flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <Clock className="w-5 h-5 text-purple-400" />
           Execution Steps
         </h3>
 
         <div className="space-y-3">
           {run.steps.map((step, index) => (
-            <div key={step.id || index} className="flex gap-4 p-4 theme-card rounded-lg border theme-border theme-transition">
+            <div key={step.id || index} className="flex gap-4 p-4 bg-slate-900/60 rounded-lg border border-slate-800">
               {/* Step indicator */}
               <div className="flex flex-col items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${step.status === "completed"
@@ -207,10 +210,10 @@ export const RunDetailPage: React.FC = () => {
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-medium theme-text capitalize">
+                    <div className="text-sm font-medium text-white capitalize">
                       {step.nodeType} Step
                     </div>
-                    <div className="text-xs theme-text-muted">
+                    <div className="text-xs text-slate-400">
                       Node ID: {step.nodeId}
                     </div>
                   </div>
@@ -227,12 +230,12 @@ export const RunDetailPage: React.FC = () => {
                 </div>
 
                 {/* Step timing */}
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs theme-text-muted">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
                   {step.startedAt && (
                     <span className="font-mono">[{new Date(step.startedAt).toLocaleTimeString()}]</span>
                   )}
                   {step.duration != null && step.duration > 0 && (
-                    <span className="theme-text-secondary font-medium">
+                    <span className="text-slate-300 font-medium">
                       {step.duration < 1000 ? `${step.duration}ms` : `${(step.duration / 1000).toFixed(2)}s`}
                     </span>
                   )}
@@ -257,7 +260,7 @@ export const RunDetailPage: React.FC = () => {
                         Explain error
                       </button>
                     </div>
-                    <pre className="text-xs text-red-200 whitespace-pre-wrap">{step.error}</pre>
+                    <pre className="text-xs text-red-200 whitespace-pre-wrap">{String(step.error)}</pre>
                   </div>
                 )}
 
@@ -266,24 +269,24 @@ export const RunDetailPage: React.FC = () => {
                   <div className="space-y-2">
                     {step.input && (
                       <details className="group">
-                        <summary className="flex items-center gap-2 text-xs theme-text-muted cursor-pointer hover:theme-text">
+                        <summary className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-white">
                           <Code className="w-3 h-3" />
                           Input Data
                         </summary>
-                        <pre className="mt-1 p-2 bg-gray-100 dark:bg-black/30 rounded text-xs theme-text-secondary overflow-x-auto">
-                          {JSON.stringify(step.input, null, 2)}
+                        <pre className="mt-1 p-2 bg-black/30 rounded text-xs text-slate-300 overflow-x-auto">
+                          {JSON.stringify(step.input as any, null, 2)}
                         </pre>
                       </details>
                     )}
 
                     {step.output && (
                       <details className="group">
-                        <summary className="flex items-center gap-2 text-xs theme-text-muted cursor-pointer hover:theme-text">
+                        <summary className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-white">
                           <Code className="w-3 h-3" />
                           Output Data
                         </summary>
-                        <pre className="mt-1 p-2 bg-gray-100 dark:bg-black/30 rounded text-xs theme-text-secondary overflow-x-auto">
-                          {JSON.stringify(step.output, null, 2)}
+                        <pre className="mt-1 p-2 bg-black/30 rounded text-xs text-slate-300 overflow-x-auto">
+                          {JSON.stringify(step.output as any, null, 2)}
                         </pre>
                       </details>
                     )}
@@ -298,12 +301,12 @@ export const RunDetailPage: React.FC = () => {
       {/* Logs */}
       {run.logs && run.logs.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold theme-text flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
             <Code className="w-5 h-5 text-purple-400" />
             Execution Logs
           </h3>
-          <div className="p-4 theme-card rounded-lg border theme-border theme-transition">
-            <pre className="text-xs theme-text-secondary whitespace-pre-wrap font-mono">
+          <div className="p-4 bg-slate-900/60 rounded-lg border border-slate-800">
+            <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono">
               {run.logs.join("\n")}
             </pre>
           </div>
