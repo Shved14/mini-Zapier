@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Clock, CheckCircle, XCircle, AlertCircle, Loader2, ArrowLeft, Code } from "lucide-react";
+import { Clock, CheckCircle, XCircle, AlertCircle, Loader2, ArrowLeft, Code, Sparkles } from "lucide-react";
 import { runsApi, WorkflowRun, StepLog } from "../api/runs";
+import { AiExplainModal } from "../components/AiExplainModal";
 
 export const RunDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -9,6 +10,7 @@ export const RunDetailPage: React.FC = () => {
   const [run, setRun] = useState<WorkflowRun | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [explainStep, setExplainStep] = useState<StepLog | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -228,24 +230,35 @@ export const RunDetailPage: React.FC = () => {
                 </div>
 
                 {/* Step timing */}
-                <div className="flex gap-4 text-xs text-slate-400">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
                   {step.startedAt && (
-                    <span>Started: {formatTime(step.startedAt)}</span>
+                    <span className="font-mono">[{new Date(step.startedAt).toLocaleTimeString()}]</span>
                   )}
-                  {step.finishedAt && (
-                    <span>Finished: {formatTime(step.finishedAt)}</span>
+                  {step.duration != null && step.duration > 0 && (
+                    <span className="text-slate-300 font-medium">
+                      {step.duration < 1000 ? `${step.duration}ms` : `${(step.duration / 1000).toFixed(2)}s`}
+                    </span>
                   )}
-                  {step.startedAt && step.finishedAt && (
-                    <span>Duration: {getDuration(step.startedAt, step.finishedAt)}</span>
+                  {!step.duration && step.startedAt && step.finishedAt && (
+                    <span>{getDuration(step.startedAt, step.finishedAt)}</span>
                   )}
                 </div>
 
                 {/* Step error */}
                 {step.error && (
                   <div className="p-2 rounded bg-red-500/10 border border-red-500/20">
-                    <div className="flex items-center gap-1 mb-1">
-                      <XCircle className="w-3 h-3 text-red-400" />
-                      <span className="text-xs text-red-300 font-medium">Error</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1">
+                        <XCircle className="w-3 h-3 text-red-400" />
+                        <span className="text-xs text-red-300 font-medium">Error</span>
+                      </div>
+                      <button
+                        onClick={() => setExplainStep(step)}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/20 transition-colors"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        Explain error
+                      </button>
                     </div>
                     <pre className="text-xs text-red-200 whitespace-pre-wrap">{String(step.error)}</pre>
                   </div>
@@ -298,6 +311,16 @@ export const RunDetailPage: React.FC = () => {
             </pre>
           </div>
         </div>
+      )}
+
+      {/* AI Explain Modal */}
+      {explainStep && explainStep.error && (
+        <AiExplainModal
+          error={String(explainStep.error)}
+          nodeType={explainStep.nodeType}
+          config={{} as Record<string, unknown>}
+          onClose={() => setExplainStep(null)}
+        />
       )}
     </div>
   );

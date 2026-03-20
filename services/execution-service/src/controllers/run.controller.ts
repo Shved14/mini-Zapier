@@ -20,8 +20,8 @@ function extractSteps(job: any): any[] {
     input: log.input,
     output: log.output,
     error: log.error || null,
-    startedAt: null,
-    finishedAt: null,
+    startedAt: log.startedAt || null,
+    finishedAt: log.finishedAt || null,
     duration: log.durationMs,
   }));
 }

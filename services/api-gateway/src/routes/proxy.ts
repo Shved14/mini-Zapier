@@ -62,6 +62,11 @@ router.use("/workflows/invite/:token", serviceProxy(WORKFLOW_SERVICE_URL, "/work
 router.post("/workflows/invite/:token/accept", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/accept"));
 router.post("/workflows/invite/:token/decline", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/decline"));
 
+// AI & utility endpoints on execution service
+router.use("/explain-error", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/api/explain-error"));
+router.use("/test-node", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/api/test-node"));
+router.use("/templates", serviceProxy(EXECUTION_SERVICE_URL, "/api/templates"));
+
 router.use("/notifications", validateJwt, serviceProxy(NOTIFICATION_SERVICE_URL, "/notifications"));
 
 export default router;

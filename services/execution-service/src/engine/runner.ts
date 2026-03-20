@@ -19,6 +19,8 @@ export interface NodeLog {
   output: unknown;
   error?: string;
   durationMs: number;
+  startedAt: string;
+  finishedAt: string;
 }
 
 export interface WorkflowResult {
@@ -109,6 +111,7 @@ export async function runWorkflow(data: WorkflowJobData): Promise<WorkflowResult
 
     const durationMs = Date.now() - nodeStart;
 
+    const finishedAt = new Date().toISOString();
     const log: NodeLog = {
       nodeId,
       type: node.type,
@@ -117,6 +120,8 @@ export async function runWorkflow(data: WorkflowJobData): Promise<WorkflowResult
       output: result.data ?? null,
       error: result.error,
       durationMs,
+      startedAt: new Date(nodeStart).toISOString(),
+      finishedAt,
     };
     logs.push(log);
 
