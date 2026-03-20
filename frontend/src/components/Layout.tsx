@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
-import { Zap, LayoutDashboard, Play, BarChart3, User, LogOut } from "lucide-react";
-import { useThemeStore } from "../store/useThemeStore";
+import { Zap, LayoutDashboard, Play, BarChart3, LogOut } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 
 type LayoutProps = {
@@ -15,7 +14,6 @@ const navItems = [
   { id: "workflows", label: "Workflows", icon: LayoutDashboard },
   { id: "runs", label: "Runs", icon: Play },
   { id: "stats", label: "Statistics", icon: BarChart3 },
-  { id: "profile", label: "Profile", icon: User },
 ];
 
 export const Layout: React.FC<LayoutProps> = ({
@@ -25,17 +23,11 @@ export const Layout: React.FC<LayoutProps> = ({
   onBackToLanding,
   onLogout,
 }) => {
-  const { theme, toggleTheme } = useThemeStore();
-
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  }, [theme]);
+    root.classList.add("dark");
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-slate-950 text-slate-50">
@@ -98,12 +90,6 @@ export const Layout: React.FC<LayoutProps> = ({
           </h2>
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <button
-              onClick={toggleTheme}
-              className="px-3 py-1.5 text-xs rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-            >
-              {theme === "dark" ? "Light" : "Dark"}
-            </button>
           </div>
         </header>
         <section className="flex-1 p-6 overflow-y-auto">

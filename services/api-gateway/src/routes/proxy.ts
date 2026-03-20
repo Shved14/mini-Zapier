@@ -36,6 +36,14 @@ function serviceProxy(target: string, prefix: string) {
           (res as any).status(502).json({ message: "Service unavailable" });
         }
       },
+      proxyReq: (proxyReq, req) => {
+        // Forward user data from JWT validation to downstream services
+        if ((req as any).user) {
+          proxyReq.setHeader('X-User-ID', (req as any).user.userId);
+          proxyReq.setHeader('X-User-Email', (req as any).user.email);
+          proxyReq.setHeader('X-User-Name', (req as any).user.name || '');
+        }
+      },
     },
   }) as any;
 }
@@ -61,6 +69,9 @@ router.use("/execute", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/execut
 router.use("/workflows/invite/:token", serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token"));
 router.post("/workflows/invite/:token/accept", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/accept"));
 router.post("/workflows/invite/:token/decline", validateJwt, serviceProxy(WORKFLOW_SERVICE_URL, "/workflows/invite/:token/decline"));
+
+// Stats endpoints on execution service
+router.use("/stats", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/api/stats"));
 
 // AI & utility endpoints on execution service
 router.use("/explain-error", validateJwt, serviceProxy(EXECUTION_SERVICE_URL, "/api/explain-error"));

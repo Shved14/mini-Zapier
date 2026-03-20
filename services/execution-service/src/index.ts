@@ -8,6 +8,7 @@ import { startWorker } from "./queue/worker";
 import { getRegisteredTypes } from "./executors/registry";
 import { logger } from "./utils/logger";
 import runRoutes from "./routes/run.routes";
+import statsRoutes from "./routes/stats.routes";
 import { explainError } from "./services/aiService";
 
 const app = express();
@@ -37,6 +38,7 @@ app.get("/health", async (_req, res) => {
 
 // API routes
 app.use("/api/runs", runRoutes);
+app.use("/api/stats", statsRoutes);
 
 // Legacy endpoints
 app.post("/execute", async (req, res) => {

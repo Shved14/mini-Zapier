@@ -137,13 +137,22 @@ export async function acceptInvitation(token: string, userId: string) {
     });
   }
 
+  // Get workflow details
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: invitation.workflowId },
+  });
+
   // Log the activity
   await logActivity(invitation.workflowId, userId, "member_joined", {
     email: invitation.email,
     role: invitation.role,
   });
 
-  return { message: "Invitation accepted", workflowId: invitation.workflowId };
+  return {
+    message: "Invitation accepted",
+    workflowId: invitation.workflowId,
+    workflowName: workflow?.name || "Unknown Workflow"
+  };
 }
 
 export async function declineInvitation(token: string) {

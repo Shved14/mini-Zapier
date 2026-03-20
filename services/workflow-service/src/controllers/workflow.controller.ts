@@ -11,6 +11,7 @@ import {
 import { logActivity } from "../services/activity.service";
 import { getActivityLogs } from "../services/activity.service";
 import { notifySlack } from "../services/slack.service";
+import { createInAppNotification } from "../services/notification.service";
 
 export async function create(
   req: Request,
@@ -26,6 +27,16 @@ export async function create(
       workflowJson,
     });
     await logActivity(workflow.id, user.userId, "workflow_created", { name }, user.email);
+
+    // Create notification
+    await createInAppNotification({
+      userId: user.userId,
+      type: "workflow_created",
+      title: "Workflow Created",
+      message: `You created workflow "${name}"`,
+      relatedId: workflow.id,
+    });
+
     res.status(201).json(workflow);
   } catch (error) {
     next(error);
@@ -198,6 +209,15 @@ export async function run(
 
     // Log workflow run start
     await logActivity(id, user.userId, "workflow_run_started", { payload }, user.email);
+
+    // Create notification
+    await createInAppNotification({
+      userId: user.userId,
+      type: "workflow_run_started",
+      title: "Workflow Started",
+      message: `You started workflow execution`,
+      relatedId: id,
+    });
 
     // TODO: Integrate with execution service
     // For now, just return success

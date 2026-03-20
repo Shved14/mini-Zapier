@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { createInvitation, getInvitationByToken, acceptInvitation, declineInvitation, cancelInvitation as cancelInvitationService, getInvitationsForWorkflow } from "../services/invitation.service";
 import { AppError } from "../services/workflow.service";
+import { createInAppNotification } from "../services/notification.service";
 
 export async function invite(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -64,6 +65,16 @@ export async function acceptInvite(req: Request, res: Response, next: NextFuncti
     const { token } = req.params;
 
     const result = await acceptInvitation(token, user.userId);
+
+    // TODO: Add notification for workflow owner when inviter tracking is implemented
+    // For now, just notify the user who accepted
+    await createInAppNotification({
+      userId: user.userId,
+      type: "workflow_invite_accepted",
+      title: "Invite Accepted",
+      message: `You joined the workflow "${result.workflowName}"`,
+      relatedId: result.workflowId,
+    });
 
     res.json(result);
   } catch (error) {
