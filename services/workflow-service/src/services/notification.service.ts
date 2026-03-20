@@ -8,7 +8,7 @@ interface CreateInAppNotification {
 
 export async function createInAppNotification(notification: CreateInAppNotification) {
   try {
-    const response = await fetch(`${process.env.NOTIFICATION_SERVICE_URL}/api/notifications/in-app`, {
+    const response = await fetch(`${process.env.NOTIFICATION_SERVICE_URL}/notifications/in-app`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
