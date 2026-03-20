@@ -30,7 +30,7 @@ export async function getRuns(req: Request, res: Response, next: NextFunction): 
         finishedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : null,
         progress: job.progress || 0,
         result: job.returnvalue || null,
-        error: job.failedReason || null,
+        error: job.failedReason || getWorkflowError(job) || null,
         steps: jobData.steps || []
       };
     });
@@ -90,7 +90,7 @@ export async function getRunById(req: Request, res: Response, next: NextFunction
       finishedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : null,
       progress: job.progress || 0,
       result: job.returnvalue || null,
-      error: job.failedReason || null,
+      error: job.failedReason || getWorkflowError(job) || null,
       steps: jobData.steps || [],
       logs: jobData.logs || []
     };
@@ -104,7 +104,16 @@ export async function getRunById(req: Request, res: Response, next: NextFunction
 
 function getJobStatus(job: any): string {
   if (job.failedReason) return "failed";
+  // Check returnvalue.status for workflow-level failures (job completed but workflow failed)
+  if (job.finishedOn && job.returnvalue?.status === "failed") return "failed";
   if (job.finishedOn) return "completed";
   if (job.progress > 0) return "running";
   return "pending";
+}
+
+function getWorkflowError(job: any): string | null {
+  const rv = job.returnvalue;
+  if (!rv || rv.status !== "failed") return null;
+  const lastLog = rv.logs?.[rv.logs.length - 1];
+  return lastLog?.error || "Workflow execution failed";
 }

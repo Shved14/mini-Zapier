@@ -15,10 +15,28 @@ export function startWorker(): Worker {
 
       const result = await runWorkflow(job.data);
 
-      if (result.status === "failed") {
-        throw new Error(`Workflow ${job.data.workflowId} failed: ${result.logs[result.logs.length - 1]?.error}`);
-      }
+      // Store step results in job data so they're accessible even for failed jobs
+      await job.updateData({
+        ...job.data,
+        steps: result.logs.map((log) => ({
+          id: log.nodeId,
+          nodeId: log.nodeId,
+          nodeType: log.type,
+          status: log.status === "success" ? "completed" : "failed",
+          input: log.input,
+          output: log.output,
+          error: log.error || null,
+          startedAt: log.startedAt,
+          finishedAt: log.finishedAt,
+          duration: log.durationMs,
+        })),
+      });
 
+      // Update progress
+      await job.updateProgress(100);
+
+      // Don't throw — return result so it's available via returnvalue
+      // The workflow status (completed/failed) is tracked inside the result
       return result;
     },
     {

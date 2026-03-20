@@ -85,7 +85,7 @@ export const NotificationBell: React.FC = () => {
     <div className="relative" ref={ref}>
       <button
         onClick={() => { setOpen(!open); if (!open) fetchNotifications(); }}
-        className="relative p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+        className="relative p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 theme-text-secondary hover:theme-text transition-colors"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -96,9 +96,9 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-h-96 bg-slate-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
-          <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-white">Notifications</h4>
+        <div className="absolute right-0 top-full mt-2 w-80 max-h-96 theme-card border theme-border rounded-xl shadow-2xl overflow-hidden z-50">
+          <div className="px-4 py-3 border-b theme-border flex items-center justify-between">
+            <h4 className="text-sm font-semibold theme-text">Notifications</h4>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
@@ -121,15 +121,15 @@ export const NotificationBell: React.FC = () => {
             {notifications.map((n) => (
               <div
                 key={n.id}
-                className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${!n.read ? "bg-purple-500/5" : ""
+                className={`px-4 py-3 border-b theme-border-light hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${!n.read ? "bg-purple-500/5" : ""
                   }`}
               >
                 <div className="flex items-start gap-2">
                   {!n.read && <div className="w-2 h-2 mt-1.5 rounded-full bg-purple-500 shrink-0" />}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white">{n.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{n.message}</p>
-                    <div className="text-xs text-gray-600 mt-1">
+                    <p className="text-sm theme-text">{n.title}</p>
+                    <p className="text-xs theme-text-secondary mt-0.5">{n.message}</p>
+                    <div className="text-xs theme-text-muted mt-1">
                       {new Date(n.createdAt).toLocaleString()}
                     </div>
                     {n.type === "workflow_invite" && !n.read && n.relatedId && (
@@ -152,7 +152,7 @@ export const NotificationBell: React.FC = () => {
                   {!n.read && n.type !== "workflow_invite" && (
                     <button
                       onClick={() => handleMarkRead(n.id)}
-                      className="shrink-0 p-1 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+                      className="shrink-0 p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 theme-text-muted hover:theme-text transition-colors"
                       title="Mark as read"
                     >
                       <Check className="h-3.5 w-3.5" />

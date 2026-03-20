@@ -219,13 +219,43 @@ export async function run(
       relatedId: id,
     });
 
-    // TODO: Integrate with execution service
-    // For now, just return success
+    // Fetch workflow to get workflowJson
+    const workflow = await getWorkflowById(id, user.userId);
+    if (!workflow) {
+      res.status(404).json({ message: "Workflow not found" });
+      return;
+    }
+
+    // Call execution service
+    const EXECUTION_URL = process.env.EXECUTION_SERVICE_URL || "http://execution-service:3003";
+    const execRes = await fetch(`${EXECUTION_URL}/execute`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-ID": user.userId,
+        "X-User-Email": user.email || "",
+        "X-User-Name": user.name || "",
+      },
+      body: JSON.stringify({
+        workflowId: id,
+        userId: user.userId,
+        workflowJson: workflow.workflowJson,
+        workflowName: workflow.name,
+      }),
+    });
+
+    const execData = (await execRes.json()) as any;
+
+    if (!execRes.ok) {
+      res.status(execRes.status).json(execData);
+      return;
+    }
+
     res.json({
       message: "Workflow execution started",
-      runId: `run_${Date.now()}`,
+      jobId: execData.jobId,
       workflowId: id,
-      status: "running"
+      status: "running",
     });
   } catch (error) {
     next(error);

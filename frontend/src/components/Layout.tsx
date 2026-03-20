@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
-import { Zap, LayoutDashboard, Play, BarChart3, LogOut } from "lucide-react";
+import React from "react";
+import { Zap, LayoutDashboard, Play, BarChart3, LogOut, Sun, Moon } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
+import { useThemeStore } from "../store/useThemeStore";
 
 type LayoutProps = {
   currentPage: string;
@@ -23,17 +24,13 @@ export const Layout: React.FC<LayoutProps> = ({
   onBackToLanding,
   onLogout,
 }) => {
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    root.classList.add("dark");
-  }, []);
+  const { theme, toggleTheme } = useThemeStore();
 
   return (
-    <div className="min-h-screen flex bg-slate-950 text-slate-50">
+    <div className="min-h-screen flex theme-bg theme-text theme-transition">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-white/10 bg-slate-900/80 flex flex-col shrink-0">
-        <div className="p-4 border-b border-white/10">
+      <aside className="w-64 border-r theme-border theme-sidebar flex flex-col shrink-0 theme-transition">
+        <div className="p-4 border-b theme-border">
           <button
             onClick={onBackToLanding}
             className="flex items-center gap-2 group"
@@ -42,10 +39,10 @@ export const Layout: React.FC<LayoutProps> = ({
               <Zap className="h-4 w-4 text-white" />
             </div>
             <div>
-              <span className="text-base font-bold text-white group-hover:text-purple-300 transition-colors">
+              <span className="text-base font-bold theme-text group-hover:text-purple-400 transition-colors">
                 Mini Zapier
               </span>
-              <p className="text-[10px] text-gray-500 leading-none">
+              <p className="text-[10px] theme-text-muted leading-none">
                 Automation platform
               </p>
             </div>
@@ -59,8 +56,8 @@ export const Layout: React.FC<LayoutProps> = ({
               <button
                 key={item.id}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
-                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm"
-                  : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
+                  ? "bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30 shadow-sm"
+                  : "theme-text-secondary hover:theme-text hover:bg-black/5 dark:hover:bg-white/5 border border-transparent"
                   }`}
                 onClick={() => onChangePage(item.id)}
               >
@@ -84,12 +81,23 @@ export const Layout: React.FC<LayoutProps> = ({
 
       {/* Main content */}
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="px-6 py-3 border-b border-white/10 flex items-center justify-between bg-slate-900/40 shrink-0">
-          <h2 className="text-base font-semibold capitalize text-white">
+        <header className="px-6 py-3 border-b theme-border flex items-center justify-between theme-bg-secondary theme-transition shrink-0">
+          <h2 className="text-base font-semibold capitalize theme-text">
             {currentPage.replace("workflows/", "Workflow / ")}
           </h2>
           <div className="flex items-center gap-2">
             <NotificationBell />
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium theme-text-secondary hover:theme-text border theme-border hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? (
+                <><Sun className="h-3.5 w-3.5" /> Light</>
+              ) : (
+                <><Moon className="h-3.5 w-3.5" /> Dark</>
+              )}
+            </button>
           </div>
         </header>
         <section className="flex-1 p-6 overflow-y-auto">

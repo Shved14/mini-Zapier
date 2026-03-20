@@ -120,21 +120,21 @@ export const RunDetailPage: React.FC = () => {
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate("/runs")}
-          className="p-2 rounded-lg hover:bg-white/10 text-gray-400 transition-colors"
+          className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-secondary transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1">
-          <h2 className="text-xl font-semibold text-white">{run.workflowName}</h2>
-          <p className="text-sm text-gray-400">Run ID: {run.id}</p>
+          <h2 className="text-xl font-semibold theme-text">{run.workflowName}</h2>
+          <p className="text-sm theme-text-muted">Run ID: {run.id}</p>
         </div>
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border ${run.status === "completed"
-            ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
-            : run.status === "failed"
-              ? "bg-red-500/10 text-red-300 border-red-500/20"
-              : run.status === "running"
-                ? "bg-blue-500/10 text-blue-300 border-blue-500/20"
-                : "bg-gray-500/10 text-gray-300 border-gray-500/20"
+          ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+          : run.status === "failed"
+            ? "bg-red-500/10 text-red-300 border-red-500/20"
+            : run.status === "running"
+              ? "bg-blue-500/10 text-blue-300 border-blue-500/20"
+              : "bg-gray-500/10 text-gray-300 border-gray-500/20"
           }`}>
           {getStatusIcon(run.status)}
           <span className="capitalize">{run.status}</span>
@@ -142,22 +142,22 @@ export const RunDetailPage: React.FC = () => {
       </div>
 
       {/* Run Info */}
-      <div className="grid grid-cols-4 gap-4 p-4 bg-slate-900/60 rounded-lg border border-slate-800">
+      <div className="grid grid-cols-4 gap-4 p-4 theme-card rounded-lg border theme-border theme-transition">
         <div>
-          <div className="text-xs text-slate-500 mb-1">Started</div>
-          <div className="text-sm text-white">{formatTime(run.startedAt)}</div>
+          <div className="text-xs theme-text-muted mb-1">Started</div>
+          <div className="text-sm theme-text">{formatTime(run.startedAt)}</div>
         </div>
         <div>
-          <div className="text-xs text-slate-500 mb-1">Finished</div>
-          <div className="text-sm text-white">{formatTime(run.finishedAt)}</div>
+          <div className="text-xs theme-text-muted mb-1">Finished</div>
+          <div className="text-sm theme-text">{formatTime(run.finishedAt)}</div>
         </div>
         <div>
-          <div className="text-xs text-slate-500 mb-1">Duration</div>
-          <div className="text-sm text-white">{getDuration(run.startedAt, run.finishedAt)}</div>
+          <div className="text-xs theme-text-muted mb-1">Duration</div>
+          <div className="text-sm theme-text">{getDuration(run.startedAt, run.finishedAt)}</div>
         </div>
         <div>
-          <div className="text-xs text-slate-500 mb-1">Progress</div>
-          <div className="text-sm text-white">{run.progress}%</div>
+          <div className="text-xs theme-text-muted mb-1">Progress</div>
+          <div className="text-sm theme-text">{run.progress}%</div>
         </div>
       </div>
 
@@ -174,23 +174,23 @@ export const RunDetailPage: React.FC = () => {
 
       {/* Steps Timeline */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+        <h3 className="text-lg font-semibold theme-text flex items-center gap-2">
           <Clock className="w-5 h-5 text-purple-400" />
           Execution Steps
         </h3>
 
         <div className="space-y-3">
           {run.steps.map((step, index) => (
-            <div key={step.id || index} className="flex gap-4 p-4 bg-slate-900/60 rounded-lg border border-slate-800">
+            <div key={step.id || index} className="flex gap-4 p-4 theme-card rounded-lg border theme-border theme-transition">
               {/* Step indicator */}
               <div className="flex flex-col items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${step.status === "completed"
-                    ? "bg-emerald-500 text-white"
-                    : step.status === "failed"
-                      ? "bg-red-500 text-white"
-                      : step.status === "running"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-600 text-gray-300"
+                  ? "bg-emerald-500 text-white"
+                  : step.status === "failed"
+                    ? "bg-red-500 text-white"
+                    : step.status === "running"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-600 text-gray-300"
                   }`}>
                   {step.status === "completed" ? "✓" :
                     step.status === "failed" ? "✗" :
@@ -198,7 +198,7 @@ export const RunDetailPage: React.FC = () => {
                 </div>
                 {index < run.steps.length - 1 && (
                   <div className={`w-0.5 h-8 mt-2 ${step.status === "completed" ? "bg-emerald-500" :
-                      step.status === "failed" ? "bg-red-500" : "bg-gray-600"
+                    step.status === "failed" ? "bg-red-500" : "bg-gray-600"
                     }`} />
                 )}
               </div>
@@ -207,32 +207,32 @@ export const RunDetailPage: React.FC = () => {
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-medium text-white capitalize">
+                    <div className="text-sm font-medium theme-text capitalize">
                       {step.nodeType} Step
                     </div>
-                    <div className="text-xs text-slate-400">
+                    <div className="text-xs theme-text-muted">
                       Node ID: {step.nodeId}
                     </div>
                   </div>
                   <div className={`px-2 py-1 rounded-full text-xs border ${step.status === "completed"
-                      ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
-                      : step.status === "failed"
-                        ? "bg-red-500/10 text-red-300 border-red-500/20"
-                        : step.status === "running"
-                          ? "bg-blue-500/10 text-blue-300 border-blue-500/20"
-                          : "bg-gray-500/10 text-gray-300 border-gray-500/20"
+                    ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                    : step.status === "failed"
+                      ? "bg-red-500/10 text-red-300 border-red-500/20"
+                      : step.status === "running"
+                        ? "bg-blue-500/10 text-blue-300 border-blue-500/20"
+                        : "bg-gray-500/10 text-gray-300 border-gray-500/20"
                     }`}>
                     {step.status}
                   </div>
                 </div>
 
                 {/* Step timing */}
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs theme-text-muted">
                   {step.startedAt && (
                     <span className="font-mono">[{new Date(step.startedAt).toLocaleTimeString()}]</span>
                   )}
                   {step.duration != null && step.duration > 0 && (
-                    <span className="text-slate-300 font-medium">
+                    <span className="theme-text-secondary font-medium">
                       {step.duration < 1000 ? `${step.duration}ms` : `${(step.duration / 1000).toFixed(2)}s`}
                     </span>
                   )}
@@ -266,11 +266,11 @@ export const RunDetailPage: React.FC = () => {
                   <div className="space-y-2">
                     {step.input && (
                       <details className="group">
-                        <summary className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-white">
+                        <summary className="flex items-center gap-2 text-xs theme-text-muted cursor-pointer hover:theme-text">
                           <Code className="w-3 h-3" />
                           Input Data
                         </summary>
-                        <pre className="mt-1 p-2 bg-black/30 rounded text-xs text-slate-300 overflow-x-auto">
+                        <pre className="mt-1 p-2 bg-gray-100 dark:bg-black/30 rounded text-xs theme-text-secondary overflow-x-auto">
                           {JSON.stringify(step.input, null, 2)}
                         </pre>
                       </details>
@@ -278,11 +278,11 @@ export const RunDetailPage: React.FC = () => {
 
                     {step.output && (
                       <details className="group">
-                        <summary className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-white">
+                        <summary className="flex items-center gap-2 text-xs theme-text-muted cursor-pointer hover:theme-text">
                           <Code className="w-3 h-3" />
                           Output Data
                         </summary>
-                        <pre className="mt-1 p-2 bg-black/30 rounded text-xs text-slate-300 overflow-x-auto">
+                        <pre className="mt-1 p-2 bg-gray-100 dark:bg-black/30 rounded text-xs theme-text-secondary overflow-x-auto">
                           {JSON.stringify(step.output, null, 2)}
                         </pre>
                       </details>
@@ -298,12 +298,12 @@ export const RunDetailPage: React.FC = () => {
       {/* Logs */}
       {run.logs && run.logs.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 className="text-lg font-semibold theme-text flex items-center gap-2">
             <Code className="w-5 h-5 text-purple-400" />
             Execution Logs
           </h3>
-          <div className="p-4 bg-slate-900/60 rounded-lg border border-slate-800">
-            <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono">
+          <div className="p-4 theme-card rounded-lg border theme-border theme-transition">
+            <pre className="text-xs theme-text-secondary whitespace-pre-wrap font-mono">
               {run.logs.join("\n")}
             </pre>
           </div>

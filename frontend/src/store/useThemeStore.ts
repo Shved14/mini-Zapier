@@ -8,7 +8,17 @@ type ThemeState = {
   toggleTheme: () => void;
 };
 
-const STORAGE_KEY = "miniZapierTheme";
+const STORAGE_KEY = "theme";
+
+function applyThemeToDOM(theme: Theme) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  if (theme === "dark") {
+    root.classList.add("dark");
+  } else {
+    root.classList.remove("dark");
+  }
+}
 
 const getInitialTheme = (): Theme => {
   if (typeof window === "undefined") return "dark";
@@ -17,10 +27,15 @@ const getInitialTheme = (): Theme => {
   return "dark";
 };
 
+// Apply theme immediately on load
+const initialTheme = typeof window === "undefined" ? "dark" : getInitialTheme();
+applyThemeToDOM(initialTheme);
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
-  theme: typeof window === "undefined" ? "dark" : getInitialTheme(),
+  theme: initialTheme,
   setTheme: (theme: Theme) => {
     set({ theme });
+    applyThemeToDOM(theme);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, theme);
     }
@@ -28,6 +43,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   toggleTheme: () => {
     const next: Theme = get().theme === "dark" ? "light" : "dark";
     set({ theme: next });
+    applyThemeToDOM(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, next);
     }

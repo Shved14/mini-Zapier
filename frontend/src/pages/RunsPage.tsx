@@ -158,7 +158,7 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
       <div className="flex justify-between items-center">
 
-        <h3 className="text-base font-semibold text-white flex items-center gap-2">
+        <h3 className="text-base font-semibold theme-text flex items-center gap-2">
 
           <Clock className="w-5 h-5 text-purple-400" />
 
@@ -168,7 +168,7 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
         <button
 
-          className="px-3 py-1.5 text-xs rounded-md border border-slate-700 hover:bg-slate-800 text-slate-300 transition-colors"
+          className="px-3 py-1.5 text-xs rounded-md border theme-border hover:bg-black/5 dark:hover:bg-white/5 theme-text-secondary transition-colors"
 
           onClick={fetchRuns}
 
@@ -184,7 +184,7 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
 
 
-      {loading && <div className="text-sm text-slate-400">Loading runs...</div>}
+      {loading && <div className="text-sm theme-text-muted">Loading runs...</div>}
 
       {error && <div className="text-sm text-red-400">{error}</div>}
 
@@ -198,7 +198,7 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
             key={run.id}
 
-            className="w-full text-left border border-slate-800 rounded-lg p-4 bg-slate-900/60 hover:border-primary-500/80 transition-all group"
+            className="w-full text-left border theme-border rounded-lg p-4 theme-card hover:border-purple-500/40 transition-all group theme-transition"
 
             onClick={() => onSelectRun(run.id)}
 
@@ -208,13 +208,13 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
               <div className="flex-1">
 
-                <div className="text-sm font-medium text-white mb-1">
+                <div className="text-sm font-medium theme-text mb-1">
 
                   {run.workflowName}
 
                 </div>
 
-                <div className="text-xs text-slate-400">
+                <div className="text-xs theme-text-muted">
 
                   ID: {run.id.slice(0, 8)}...
 
@@ -234,11 +234,11 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
 
 
-            <div className="grid grid-cols-3 gap-4 text-xs text-slate-400 mb-2">
+            <div className="grid grid-cols-3 gap-4 text-xs theme-text-secondary mb-2">
 
               <div>
 
-                <div className="text-slate-500">Started</div>
+                <div className="theme-text-muted">Started</div>
 
                 <div>{formatTime(run.startedAt)}</div>
 
@@ -246,7 +246,7 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
               <div>
 
-                <div className="text-slate-500">Duration</div>
+                <div className="theme-text-muted">Duration</div>
 
                 <div>{getDuration(run.startedAt, run.finishedAt)}</div>
 
@@ -254,7 +254,7 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
               <div>
 
-                <div className="text-slate-500">Progress</div>
+                <div className="theme-text-muted">Progress</div>
 
                 <div>{run.progress}%</div>
 
@@ -268,9 +268,9 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
             {run.steps.length > 0 && (
 
-              <div className="border-t border-slate-800 pt-2">
+              <div className="border-t theme-border pt-2">
 
-                <div className="text-xs text-slate-500 mb-1">Steps ({run.steps.length})</div>
+                <div className="text-xs theme-text-muted mb-1">Steps ({run.steps.length})</div>
 
                 <div className="flex gap-1 flex-wrap">
 
@@ -350,7 +350,7 @@ export const RunsPage: React.FC<RunsPageProps> = ({ onSelectRun }) => {
 
             <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
 
-            <div className="text-sm text-slate-500">
+            <div className="text-sm theme-text-muted">
 
               No runs yet. Run a workflow to see executions here.
 

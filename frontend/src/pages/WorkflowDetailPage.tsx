@@ -163,11 +163,11 @@ export const WorkflowDetailPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full -m-6">
       {/* Top bar */}
-      <div className="px-6 py-4 border-b border-white/10 bg-slate-900/40 flex items-center justify-between gap-4 shrink-0">
+      <div className="px-6 py-4 border-b theme-border theme-bg-secondary flex items-center justify-between gap-4 shrink-0 theme-transition">
         <div className="flex items-center gap-4 min-w-0">
           <button
             onClick={() => navigate("/workflows")}
-            className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors shrink-0"
+            className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 theme-text-secondary hover:theme-text transition-colors shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -185,7 +185,7 @@ export const WorkflowDetailPage: React.FC = () => {
                 }}
                 onBlur={handleNameSave}
                 disabled={nameSaving}
-                className="bg-white/5 border border-white/20 rounded-lg px-3 py-1.5 text-lg font-semibold text-white focus:outline-none focus:border-purple-500 min-w-[200px]"
+                className="theme-input border rounded-lg px-3 py-1.5 text-lg font-semibold focus:outline-none focus:border-purple-500 min-w-[200px]"
               />
               <button onClick={handleNameSave} className="p-1 text-emerald-400 hover:text-emerald-300"><Check className="h-4 w-4" /></button>
               <button onClick={() => { setEditingName(false); setNameValue(workflow.name); }} className="p-1 text-gray-400 hover:text-white"><X className="h-4 w-4" /></button>
@@ -193,7 +193,7 @@ export const WorkflowDetailPage: React.FC = () => {
           ) : (
             <h1
               onClick={() => setEditingName(true)}
-              className="text-lg font-semibold text-white truncate cursor-pointer hover:text-purple-300 transition-colors"
+              className="text-lg font-semibold theme-text truncate cursor-pointer hover:text-purple-400 transition-colors"
               title="Click to rename"
             >
               {workflow.name}
@@ -209,7 +209,7 @@ export const WorkflowDetailPage: React.FC = () => {
           </span>
 
           {/* Role badge */}
-          <span className="shrink-0 px-2 py-0.5 rounded-full text-xs bg-white/5 text-gray-400 border border-white/10">
+          <span className="shrink-0 px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-white/5 theme-text-secondary border theme-border">
             {myRole}
           </span>
         </div>
@@ -250,7 +250,7 @@ export const WorkflowDetailPage: React.FC = () => {
       </div>
 
       {/* Safe tab switching */}
-      <div className="px-6 border-b border-white/10 bg-slate-900/20 flex gap-0 shrink-0">
+      <div className="px-6 border-b theme-border theme-bg-secondary flex gap-0 shrink-0 theme-transition">
         {allTabs.filter(tab => !tab.ownerOnly || isOwner).map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -271,8 +271,8 @@ export const WorkflowDetailPage: React.FC = () => {
                 }
               }}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${isActive
-                ? "border-purple-500 text-white"
-                : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600"
+                ? "border-purple-500 theme-text"
+                : "border-transparent theme-text-secondary hover:theme-text hover:border-gray-400 dark:hover:border-gray-600"
                 }`}
             >
               <Icon className="h-4 w-4" />
@@ -306,22 +306,22 @@ export const WorkflowDetailPage: React.FC = () => {
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-full max-w-md mx-4 p-6 rounded-2xl glass border border-white/10"
+              className="w-full max-w-md mx-4 p-6 rounded-2xl theme-card border theme-border shadow-2xl theme-transition"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
                   <Trash2 className="h-5 w-5 text-red-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Delete workflow</h3>
-                  <p className="text-sm text-gray-400">This action cannot be undone</p>
+                  <h3 className="text-lg font-semibold theme-text">Delete workflow</h3>
+                  <p className="text-sm theme-text-secondary">This action cannot be undone</p>
                 </div>
               </div>
-              <p className="text-gray-300 mb-6">
-                Delete <span className="font-medium text-white">{workflow.name}</span>?
+              <p className="theme-text-secondary mb-6">
+                Delete <span className="font-medium theme-text">{workflow.name}</span>?
               </p>
               <div className="flex justify-end gap-3">
-                <button onClick={() => setShowDelete(false)} disabled={deleting} className="px-4 py-2 rounded-lg glass border border-white/10 hover:bg-white/10 text-white text-sm transition-all disabled:opacity-50">Cancel</button>
+                <button onClick={() => setShowDelete(false)} disabled={deleting} className="px-4 py-2 rounded-lg border theme-border hover:bg-black/5 dark:hover:bg-white/10 theme-text text-sm transition-all disabled:opacity-50">Cancel</button>
                 <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 text-sm transition-all disabled:opacity-50">{deleting ? "Deleting..." : "Delete"}</button>
               </div>
             </motion.div>

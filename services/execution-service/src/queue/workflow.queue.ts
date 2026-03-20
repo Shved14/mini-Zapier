@@ -16,13 +16,28 @@ export const workflowQueue = new Queue(WORKFLOW_QUEUE_NAME, {
   },
 });
 
+export interface StepData {
+  id: string;
+  nodeId: string;
+  nodeType: string;
+  status: string;
+  input?: unknown;
+  output?: unknown;
+  error?: string | null;
+  startedAt?: string;
+  finishedAt?: string;
+  duration?: number;
+}
+
 export interface WorkflowJobData {
   workflowId: string;
   userId: string;
+  workflowName?: string;
   workflowJson: {
     nodes: WorkflowNode[];
     edges: WorkflowEdge[];
   };
+  steps?: StepData[];
 }
 
 export interface WorkflowNode {

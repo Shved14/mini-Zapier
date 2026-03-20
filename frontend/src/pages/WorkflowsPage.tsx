@@ -72,8 +72,8 @@ export const WorkflowsPage: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white">Workflows</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage and automate your workflows</p>
+          <h1 className="text-2xl font-bold theme-text">Workflows</h1>
+          <p className="theme-text-muted text-sm mt-1">Manage and automate your workflows</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.03 }}
@@ -115,17 +115,17 @@ export const WorkflowsPage: React.FC = () => {
                 onClick={() => navigate(`/workflows/${workflow.id}`)}
                 className="group cursor-pointer"
               >
-                <div className="rounded-xl p-5 border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-purple-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/5">
+                <div className="rounded-xl p-5 border theme-border theme-card hover:border-purple-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/5 theme-transition">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 flex items-center justify-center shrink-0">
                         <Zap className="h-4 w-4 text-purple-400" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-semibold text-white truncate group-hover:text-purple-300 transition-colors">
+                        <h3 className="text-sm font-semibold theme-text truncate group-hover:text-purple-400 transition-colors">
                           {workflow.name}
                         </h3>
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
+                        <div className="flex items-center gap-1.5 text-xs theme-text-muted mt-0.5">
                           <Clock className="h-3 w-3" />
                           {new Date(workflow.createdAt).toLocaleDateString()}
                         </div>
@@ -139,7 +139,7 @@ export const WorkflowsPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                  <div className="flex items-center justify-between pt-3 border-t theme-border-light">
                     <div className="flex items-center gap-1.5">
                       <motion.button
                         whileHover={{ scale: 1.1 }}
@@ -160,7 +160,7 @@ export const WorkflowsPage: React.FC = () => {
                         <Trash2 className="h-3.5 w-3.5" />
                       </motion.button>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500 group-hover:text-purple-400 transition-colors">
+                    <div className="flex items-center gap-1 text-xs theme-text-muted group-hover:text-purple-400 transition-colors">
                       Open <ArrowRight className="h-3 w-3" />
                     </div>
                   </div>
@@ -181,8 +181,8 @@ export const WorkflowsPage: React.FC = () => {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-purple-500/20 border border-purple-500/20 mb-4">
             <Zap className="h-7 w-7 text-purple-400" />
           </div>
-          <h3 className="text-lg font-semibold text-white mb-1">No workflows yet</h3>
-          <p className="text-gray-500 text-sm mb-6">Create your first workflow to get started</p>
+          <h3 className="text-lg font-semibold theme-text mb-1">No workflows yet</h3>
+          <p className="theme-text-muted text-sm mb-6">Create your first workflow to get started</p>
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
@@ -207,22 +207,22 @@ export const WorkflowsPage: React.FC = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-sm mx-4 p-6 rounded-2xl bg-slate-900 border border-white/10 shadow-2xl"
+              className="w-full max-w-sm mx-4 p-6 rounded-2xl theme-card border theme-border shadow-2xl theme-transition"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
                   <Trash2 className="h-5 w-5 text-red-400" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Delete workflow</h3>
-                  <p className="text-xs text-gray-500">This cannot be undone</p>
+                  <h3 className="text-base font-semibold theme-text">Delete workflow</h3>
+                  <p className="text-xs theme-text-muted">This cannot be undone</p>
                 </div>
               </div>
-              <p className="text-sm text-gray-300 mb-5">
-                Delete <span className="font-medium text-white">{deleting.name}</span>?
+              <p className="text-sm theme-text-secondary mb-5">
+                Delete <span className="font-medium theme-text">{deleting.name}</span>?
               </p>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setDeleting(null)} disabled={deletingLoading} className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/5 text-white text-sm transition-all disabled:opacity-50">Cancel</button>
+                <button onClick={() => setDeleting(null)} disabled={deletingLoading} className="px-4 py-2 rounded-lg border theme-border hover:bg-black/5 dark:hover:bg-white/5 theme-text text-sm transition-all disabled:opacity-50">Cancel</button>
                 <button onClick={() => handleDelete(deleting)} disabled={deletingLoading} className="px-4 py-2 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 text-sm transition-all disabled:opacity-50">{deletingLoading ? "Deleting..." : "Delete"}</button>
               </div>
             </motion.div>
@@ -245,22 +245,22 @@ export const WorkflowsPage: React.FC = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm mx-4 p-6 rounded-2xl bg-slate-900 border border-white/10 shadow-2xl"
+              className="w-full max-w-sm mx-4 p-6 rounded-2xl theme-card border theme-border shadow-2xl theme-transition"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold text-white">Create workflow</h3>
-                <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-white transition-colors">
+                <h3 className="text-base font-semibold theme-text">Create workflow</h3>
+                <button onClick={() => setShowCreate(false)} className="theme-text-muted hover:theme-text transition-colors">
                   <X className="h-5 w-5" />
                 </button>
               </div>
               <form onSubmit={handleCreateSubmit}>
-                <label className="block text-xs text-gray-400 mb-1">Workflow name</label>
+                <label className="block text-xs theme-text-secondary mb-1">Workflow name</label>
                 <input
                   autoFocus
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="My awesome workflow"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 mb-4"
+                  className="w-full theme-input border rounded-lg px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-purple-500 mb-4"
                 />
                 {actionError && <p className="text-xs text-red-400 mb-3">{actionError}</p>}
                 <div className="flex justify-end gap-2">
@@ -268,7 +268,7 @@ export const WorkflowsPage: React.FC = () => {
                     type="button"
                     onClick={() => { setShowCreate(false); setNewName(""); }}
                     disabled={creating}
-                    className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/5 text-white text-sm transition-all disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg border theme-border hover:bg-black/5 dark:hover:bg-white/5 theme-text text-sm transition-all disabled:opacity-50"
                   >
                     Cancel
                   </button>

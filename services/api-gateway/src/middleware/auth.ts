@@ -18,6 +18,7 @@ export function validateJwt(req: Request, res: Response, next: NextFunction): vo
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    (req as any).user = decoded;
     console.log("[validateJwt] VALID token for:", (decoded as any).email);
     next();
   } catch (err: any) {

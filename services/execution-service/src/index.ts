@@ -43,7 +43,7 @@ app.use("/api/stats", statsRoutes);
 // Legacy endpoints
 app.post("/execute", async (req, res) => {
   try {
-    const { workflowId, userId, workflowJson } = req.body as WorkflowJobData;
+    const { workflowId, userId, workflowJson, workflowName } = req.body as WorkflowJobData & { workflowName?: string };
 
     if (!workflowId || !userId || !workflowJson) {
       res.status(400).json({ message: "workflowId, userId, and workflowJson are required" });
@@ -54,6 +54,7 @@ app.post("/execute", async (req, res) => {
       workflowId,
       userId,
       workflowJson,
+      workflowName: workflowName || "Unknown Workflow",
     });
 
     logger.info(`Job enqueued`, { jobId: job.id, workflowId });
