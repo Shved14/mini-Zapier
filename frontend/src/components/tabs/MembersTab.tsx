@@ -158,28 +158,6 @@ export const MembersTab: React.FC<MembersTabProps> = ({ workflowId, ownerId }) =
             Role: <span className="text-blue-300 font-medium">Editor</span> — can edit nodes, view logs, and run workflows
           </div>
           {inviteError && <p className="text-xs text-red-400">{inviteError}</p>}
-          {lastInviteLink && (
-            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-              <p className="text-xs text-emerald-300 mb-1">Invitation sent! Share this link:</p>
-              <div className="flex items-center gap-2">
-                <input
-                  readOnly
-                  value={lastInviteLink}
-                  className="flex-1 text-xs bg-black/30 border border-white/10 rounded px-2 py-1.5 text-white font-mono"
-                />
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(lastInviteLink);
-                    setCopiedToken("link");
-                    setTimeout(() => setCopiedToken(null), 2000);
-                  }}
-                  className="px-2.5 py-1.5 text-xs rounded bg-white/10 hover:bg-white/20 text-white transition-all"
-                >
-                  {copiedToken === "link" ? "Copied!" : "Copy"}
-                </button>
-              </div>
-            </div>
-          )}
           <div className="flex gap-2">
             <button
               onClick={handleInvite}
