@@ -94,7 +94,7 @@ export const AiExplainModal: React.FC<AiExplainModalProps> = ({
                   <Wrench className="w-4 h-4 text-emerald-400" />
                   <span className="text-sm font-medium text-emerald-300">Suggested Fix</span>
                 </div>
-                <p className="text-sm text-slate-200 leading-relaxed">{result.suggestedFix}</p>
+                <p className="text-sm text-slate-200 leading-relaxed">{result.fix}</p>
               </div>
             </>
           )}

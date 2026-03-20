@@ -2,7 +2,7 @@ import { api } from "./client";
 
 export interface AiExplanation {
   explanation: string;
-  suggestedFix: string;
+  fix: string;
 }
 
 export interface TestNodeResult {
