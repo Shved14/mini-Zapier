@@ -8,6 +8,7 @@ import {
   AppError,
 } from "../services/auth.service";
 import { sendVerificationCode, generateVerificationCode } from "../services/email.service";
+import { storeVerificationCode, verifyCode } from "../services/verification.service";
 import axios from "axios";
 
 export async function register(
@@ -18,18 +19,40 @@ export async function register(
   try {
     const { email, password, name } = req.body;
 
-    const result = await registerUser({ email, password, name });
-
-    // Отправляем код верификации (fire-and-forget, не блокируем регистрацию)
+    // Генерируем и сохраняем код верификации
     const code = generateVerificationCode();
+    await storeVerificationCode(email, code);
+
+    // Отправляем email (fire-and-forget, не блокируем регистрацию)
     sendVerificationCode(email, code)
       .then(() => console.log(`✅ Verification code sent to ${email}`))
       .catch((err) => console.error(`❌ Failed to send verification email to ${email}:`, err));
+
     res.status(201).json({
-      ...result,
-      message: "Registration successful. Verification code sent to your email.",
-      verificationCode: code, // Только для тестирования!
+      message: "Verification code sent to your email.",
+      email,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyEmail(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { email, code, password, name } = req.body;
+
+    const valid = await verifyCode(email, code);
+    if (!valid) {
+      res.status(400).json({ message: "Invalid or expired verification code" });
+      return;
+    }
+
+    const result = await registerUser({ email, password, name });
+    res.status(201).json(result);
   } catch (error) {
     next(error);
   }

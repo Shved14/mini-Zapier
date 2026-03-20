@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { register, login, me, updateMe, getUserById, googleRedirect, googleCallback, githubRedirect, githubCallback } from "../controllers/auth.controller";
+import { register, verifyEmail, login, me, updateMe, getUserById, googleRedirect, googleCallback, githubRedirect, githubCallback } from "../controllers/auth.controller";
 import { authenticate } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 
@@ -26,6 +26,7 @@ const oauthSchema = z.object({
 const router = Router();
 
 router.post("/register", validate(registerSchema), register);
+router.post("/verify-email", verifyEmail);
 router.post("/login", validate(loginSchema), login);
 router.get("/me", authenticate, me);
 router.patch("/me", authenticate, updateMe);
