@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { createInvitation, getInvitationByToken, acceptInvitation, declineInvitation, getInvitationsForWorkflow } from "../services/invitation.service";
+import { createInvitation, getInvitationByToken, acceptInvitation, declineInvitation, cancelInvitation as cancelInvitationService, getInvitationsForWorkflow } from "../services/invitation.service";
 import { AppError } from "../services/workflow.service";
 
 export async function invite(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -74,9 +74,8 @@ export async function acceptInvite(req: Request, res: Response, next: NextFuncti
 export async function declineInvite(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { token } = req.params;
-    const user = (req as any).user;
 
-    const result = await declineInvitation(token, user.userId);
+    const result = await declineInvitation(token);
 
     res.json(result);
   } catch (error) {
@@ -98,6 +97,16 @@ export async function listInvitations(req: Request, res: Response, next: NextFun
         createdAt: inv.createdAt,
       })),
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function cancelInvitation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { invitationId } = req.params;
+    await cancelInvitationService(invitationId);
+    res.json({ message: "Invitation cancelled successfully" });
   } catch (error) {
     next(error);
   }

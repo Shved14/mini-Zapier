@@ -36,6 +36,10 @@ export const membersApi = {
     return res.data;
   },
 
+  async cancelInvitation(workflowId: string, invitationId: string) {
+    await api.delete(`/workflows/${workflowId}/invites/${invitationId}`);
+  },
+
   async acceptInviteByToken(token: string) {
     const res = await api.post(`/workflows/invite/${token}/accept`);
     return res.data;

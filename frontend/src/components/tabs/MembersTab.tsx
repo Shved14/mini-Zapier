@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Users, UserPlus, Trash2, Crown, Shield, Eye, Copy, Check, LogOut, Mail, Clock } from "lucide-react";
+import { Users, UserPlus, Trash2, Crown, Shield, Eye, Copy, Check, LogOut, Mail, Clock, X } from "lucide-react";
 import { membersApi, WorkflowMember, WorkflowInvite } from "../../api/members";
 import { useAuthStore } from "../../store/useAuthStore";
 
@@ -88,6 +88,13 @@ export const MembersTab: React.FC<MembersTabProps> = ({ workflowId, ownerId }) =
     } catch {
       setLeaving(false);
     }
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    try {
+      await membersApi.cancelInvitation(workflowId, invitationId);
+      fetchMembers();
+    } catch { /* silently fail */ }
   };
 
   const copyInviteLink = (token: string) => {
@@ -246,17 +253,26 @@ export const MembersTab: React.FC<MembersTabProps> = ({ workflowId, ownerId }) =
                   <div className="text-sm text-white font-medium truncate">{inv.email}</div>
                   <div className="text-xs text-gray-500">Invited as {inv.role}</div>
                 </div>
-                <button
-                  onClick={() => copyInviteLink(inv.token)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 transition-all"
-                  title="Copy invite link"
-                >
-                  {copiedToken === inv.token ? (
-                    <><Check className="h-3 w-3 text-emerald-400" /> Copied</>
-                  ) : (
-                    <><Copy className="h-3 w-3" /> Copy link</>
-                  )}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => copyInviteLink(inv.token)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 transition-all"
+                    title="Copy invite link"
+                  >
+                    {copiedToken === inv.token ? (
+                      <><Check className="h-3 w-3 text-emerald-400" /> Copied</>
+                    ) : (
+                      <><Copy className="h-3 w-3" /> Copy link</>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleCancelInvitation(inv.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-all"
+                    title="Cancel invitation"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

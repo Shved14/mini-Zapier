@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { create, update, getAll, getById, patchStatus, listLogs, remove, run } from "../controllers/workflow.controller";
 import { listMembers, accept, decline, remove as removeMember } from "../controllers/member.controller";
-import { invite as inviteEmail, getInvitation, acceptInvite, declineInvite, listInvitations } from "../controllers/invitation.controller";
+import { invite as inviteEmail, getInvitation, acceptInvite, declineInvite, listInvitations, cancelInvitation } from "../controllers/invitation.controller";
 import { authenticate } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 
@@ -54,6 +54,7 @@ router.post("/:id/run", authenticate, run);
 // Email-based invitations (aliases)
 router.post("/:id/invite-email", authenticate, validate(inviteSchema), inviteEmail);
 router.get("/:id/invitations", authenticate, listInvitations);
+router.delete("/:id/invites/:invitationId", authenticate, cancelInvitation);
 router.get("/invite/:token", getInvitation);
 router.post("/invite/:token/accept", authenticate, acceptInvite);
 router.post("/invite/:token/decline", authenticate, declineInvite);

@@ -146,7 +146,7 @@ export async function acceptInvitation(token: string, userId: string) {
   return { message: "Invitation accepted", workflowId: invitation.workflowId };
 }
 
-export async function declineInvitation(token: string, userId?: string) {
+export async function declineInvitation(token: string) {
   const invitation = await getInvitationByToken(token);
 
   // Update invitation status
@@ -162,6 +162,34 @@ export async function declineInvitation(token: string, userId?: string) {
   });
 
   return { message: "Invitation declined" };
+}
+
+export async function cancelInvitation(invitationId: string) {
+  const invitation = await prisma.invitation.findUnique({
+    where: { id: invitationId },
+  });
+
+  if (!invitation) {
+    throw new Error("Invitation not found");
+  }
+
+  // Get workflow to find owner for logging
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: invitation.workflowId },
+  });
+
+  // Delete the invitation
+  await prisma.invitation.delete({
+    where: { id: invitationId },
+  });
+
+  // Log the activity
+  await logActivity(invitation.workflowId, workflow?.userId || "unknown", "member_left", {
+    email: invitation.email,
+    role: invitation.role,
+  });
+
+  return { message: "Invitation cancelled" };
 }
 
 export async function getInvitationsForWorkflow(workflowId: string) {

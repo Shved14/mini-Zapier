@@ -209,7 +209,7 @@ export const LogsTab: React.FC<LogsTabProps> = ({ workflowId }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 px-4">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <Clock className="w-5 h-5 text-purple-400" />
           Activity Log
@@ -243,14 +243,6 @@ export const LogsTab: React.FC<LogsTabProps> = ({ workflowId }) => {
           </div>
         ))}
       </div>
-
-      {logs.length > 10 && (
-        <div className="text-center pt-4">
-          <button className="text-purple-400 hover:text-purple-300 text-sm transition-colors">
-            Load more activities
-          </button>
-        </div>
-      )}
     </div>
   );
 };
