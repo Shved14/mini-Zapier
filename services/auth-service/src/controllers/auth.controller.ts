@@ -18,17 +18,13 @@ export async function register(
   try {
     const { email, password, name } = req.body;
 
-    // Отправляем код верификации
-    const code = generateVerificationCode();
-    try {
-      await sendVerificationCode(email, code);
-      console.log(`✅ Verification code sent to ${email}`);
-    } catch (emailError) {
-      console.error(`❌ Failed to send verification email to ${email}:`, emailError);
-      // Продолжаем регистрацию даже если email не отправился
-    }
-
     const result = await registerUser({ email, password, name });
+
+    // Отправляем код верификации (fire-and-forget, не блокируем регистрацию)
+    const code = generateVerificationCode();
+    sendVerificationCode(email, code)
+      .then(() => console.log(`✅ Verification code sent to ${email}`))
+      .catch((err) => console.error(`❌ Failed to send verification email to ${email}:`, err));
     res.status(201).json({
       ...result,
       message: "Registration successful. Verification code sent to your email.",
