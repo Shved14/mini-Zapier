@@ -22,6 +22,47 @@ export class EmailExecutor extends BaseExecutor {
     const smtpUser = (config.smtpUser as string) || process.env.SMTP_USER || "";
     const smtpPass = (config.smtpPass as string) || process.env.SMTP_PASS || "";
 
+    // Check if using Resend
+    if (smtpHost === "smtp.resend.com" || smtpUser === "resend") {
+      // Use Resend API
+      const resendApiKey = smtpPass.startsWith("re_") ? smtpPass : process.env.RESEND_API_KEY;
+      if (!resendApiKey || !resendApiKey.startsWith("re_")) {
+        return {
+          success: false,
+          error: "Resend API key is required and must start with 're_'",
+        };
+      }
+
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: (config.from as string) || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+          to: [config.to as string],
+          subject: config.subject as string,
+          html: config.body as string,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        return {
+          success: false,
+          error: `Resend API error: ${response.status} ${error}`,
+        };
+      }
+
+      const data = await response.json() as any;
+      return {
+        success: true,
+        data: { messageId: data.id },
+      };
+    }
+
+    // Use regular SMTP (nodemailer)
     const transporter = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
