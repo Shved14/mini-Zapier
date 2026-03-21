@@ -54,6 +54,7 @@ export const WorkflowDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("editor");
+  const [editorKey, setEditorKey] = useState(0);
 
   // Inline name editing
   const [editingName, setEditingName] = useState(false);
@@ -288,6 +289,7 @@ export const WorkflowDetailPage: React.FC = () => {
       <div className="flex-1 overflow-hidden">
         {activeTab === "editor" && (
           <WorkflowEditor
+            key={editorKey}
             workflow={workflow}
             onClose={() => navigate("/workflows")}
             onSave={(workflowJson) => {
@@ -300,8 +302,18 @@ export const WorkflowDetailPage: React.FC = () => {
           <VersionsTab
             workflowId={workflow.id}
             currentJson={workflow.workflowJson}
-            onRestore={(json) => {
-              setWorkflow((prev) => prev ? { ...prev, workflowJson: json } : prev);
+            onRestore={async () => {
+              // Re-fetch from server to guarantee fresh data
+              if (id) {
+                try {
+                  const fresh = await workflowsApi.get(id);
+                  setWorkflow(fresh);
+                } catch { /* fallback: keep current state */ }
+              }
+              // Bump key to force Editor remount with new data
+              setEditorKey((k) => k + 1);
+              // Auto-switch to Editor so user sees the restored workflow
+              setActiveTab("editor");
             }}
           />
         )}

@@ -5,7 +5,7 @@ import { versionsApi, WorkflowVersion } from "../../api/versions";
 type VersionsTabProps = {
   workflowId: string;
   currentJson?: unknown;
-  onRestore?: (workflowJson: unknown) => void;
+  onRestore?: () => void | Promise<void>;
 };
 
 export const VersionsTab: React.FC<VersionsTabProps> = ({ workflowId, currentJson, onRestore }) => {
@@ -36,10 +36,10 @@ export const VersionsTab: React.FC<VersionsTabProps> = ({ workflowId, currentJso
     setRestoring(version.id);
     setError(null);
     try {
-      const updated = await versionsApi.restore(workflowId, version.id);
+      await versionsApi.restore(workflowId, version.id);
       setSuccess(`Restored to version ${version.version}`);
       setTimeout(() => setSuccess(null), 4000);
-      if (onRestore) onRestore(updated.workflowJson);
+      if (onRestore) await onRestore();
       fetchVersions();
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to restore version");

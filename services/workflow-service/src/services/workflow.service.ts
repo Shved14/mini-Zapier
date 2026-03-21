@@ -166,6 +166,7 @@ export async function getWorkflowsByUser(userId: string) {
   const owned = await prisma.workflow.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
+    include: { members: { where: { status: "accepted" } } },
   });
 
   const memberOf = await prisma.workflow.findMany({
@@ -175,6 +176,7 @@ export async function getWorkflowsByUser(userId: string) {
       },
     },
     orderBy: { createdAt: "desc" },
+    include: { members: { where: { status: "accepted" } } },
   });
 
   const ids = new Set(owned.map((w) => w.id));

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "../store/useAppStore";
 import { Workflow } from "../api/workflows";
-import { Plus, Play, Trash2, Zap, Clock, ArrowRight, X } from "lucide-react";
+import { Plus, Play, Trash2, Zap, Clock, ArrowRight, X, Users } from "lucide-react";
 
 export const WorkflowsPage: React.FC = () => {
   const { workflows, loading, error, fetchWorkflows, createWorkflow, deleteWorkflow: storeDelete, runWorkflow } = useAppStore();
@@ -105,6 +105,7 @@ export const WorkflowsPage: React.FC = () => {
         <AnimatePresence>
           {workflows.map((workflow, index) => {
             const isActive = workflow.status === "active" || workflow.isActive;
+            const memberCount = ((workflow as any).members?.length ?? 0) + 1; // +1 for owner
             return (
               <motion.div
                 key={workflow.id}
@@ -125,9 +126,15 @@ export const WorkflowsPage: React.FC = () => {
                         <h3 className="text-sm font-semibold text-white truncate group-hover:text-purple-300 transition-colors">
                           {workflow.name}
                         </h3>
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-                          <Clock className="h-3 w-3" />
-                          {new Date(workflow.createdAt).toLocaleDateString()}
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(workflow.createdAt).toLocaleDateString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {memberCount}
+                          </span>
                         </div>
                       </div>
                     </div>
