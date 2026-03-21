@@ -152,11 +152,11 @@ export const SubscriptionsPage: React.FC = () => {
                   )}
                 </div>
                 <p className="text-sm text-slate-400 mt-0.5">
-                  {subscription.limits.maxWorkflows === -1
+                  {(!subscription.limits.maxWorkflows || subscription.limits.maxWorkflows === -1)
                     ? "Unlimited workflows"
                     : `${subscription.limits.maxWorkflows} workflow`}
                   {" · "}
-                  {subscription.limits.maxRuns === -1
+                  {(!subscription.limits.maxRuns || subscription.limits.maxRuns === -1)
                     ? "Unlimited runs"
                     : `${subscription.limits.maxRuns} runs`}
                 </p>
@@ -175,11 +175,10 @@ export const SubscriptionsPage: React.FC = () => {
           return (
             <div
               key={plan.id}
-              className={`relative bg-slate-800/60 border rounded-xl p-6 transition-all ${
-                isCurrent
+              className={`relative bg-slate-800/60 border rounded-xl p-6 transition-all ${isCurrent
                   ? "border-purple-500/50 ring-1 ring-purple-500/20"
                   : "border-slate-700 hover:border-slate-600"
-              }`}
+                }`}
             >
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -239,31 +238,32 @@ export const SubscriptionsPage: React.FC = () => {
                 </button>
               ) : plan.id === "PRO" && subscription?.plan === "FREE" ? (
                 <div className="space-y-2">
-                  {(!trialActive || trialExpired) && (
-                    <button
-                      onClick={handleActivateTrial}
-                      disabled={actionLoading === "trial"}
-                      className="w-full py-2.5 text-sm rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium transition-all shadow-lg hover:shadow-purple-500/25 disabled:opacity-60"
-                    >
-                      {actionLoading === "trial"
-                        ? "Activating..."
-                        : "Start 3-Day Free Trial"}
-                    </button>
-                  )}
+                  <button
+                    onClick={handleActivateTrial}
+                    disabled={actionLoading === "trial"}
+                    className="w-full py-2.5 text-sm rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium transition-all shadow-lg hover:shadow-purple-500/25 disabled:opacity-60"
+                  >
+                    {actionLoading === "trial"
+                      ? "Activating..."
+                      : "Start 3-Day Free Trial"}
+                  </button>
                   <button
                     onClick={() => handleUpgrade("PRO")}
                     disabled={actionLoading === "PRO"}
-                    className={`w-full py-2.5 text-sm rounded-lg font-medium transition-all disabled:opacity-60 ${
-                      trialActive && !trialExpired
-                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-purple-500/25"
-                        : "bg-slate-700 hover:bg-slate-600 text-white"
-                    }`}
+                    className="w-full py-2.5 text-sm rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-all disabled:opacity-60"
                   >
                     {actionLoading === "PRO"
                       ? "Upgrading..."
                       : "Upgrade to PRO"}
                   </button>
                 </div>
+              ) : plan.id === "FREE" && subscription?.plan === "PRO" && trialActive && !trialExpired ? (
+                <button
+                  disabled
+                  className="w-full py-2.5 text-sm rounded-lg bg-slate-700 text-slate-500 font-medium cursor-not-allowed"
+                >
+                  Auto-reverts after trial ({trialDaysLeft}d left)
+                </button>
               ) : (
                 <button
                   onClick={() => handleUpgrade(plan.id)}
@@ -292,7 +292,7 @@ export const SubscriptionsPage: React.FC = () => {
                 Workflows
               </p>
               <p className="text-xl font-bold text-white flex items-center gap-2">
-                {subscription.limits.maxWorkflows === -1 ? (
+                {(!subscription.limits.maxWorkflows || subscription.limits.maxWorkflows === -1) ? (
                   <>
                     <Infinity className="h-5 w-5 text-purple-400" /> Unlimited
                   </>
@@ -306,7 +306,7 @@ export const SubscriptionsPage: React.FC = () => {
                 Runs
               </p>
               <p className="text-xl font-bold text-white flex items-center gap-2">
-                {subscription.limits.maxRuns === -1 ? (
+                {(!subscription.limits.maxRuns || subscription.limits.maxRuns === -1) ? (
                   <>
                     <Infinity className="h-5 w-5 text-purple-400" /> Unlimited
                   </>

@@ -3,24 +3,25 @@ import { AppError } from "./auth.service";
 
 const PLAN_LIMITS: Record<string, { maxWorkflows: number; maxRuns: number }> = {
   FREE: { maxWorkflows: 1, maxRuns: 10 },
-  PRO: { maxWorkflows: Infinity, maxRuns: Infinity },
+  PRO: { maxWorkflows: -1, maxRuns: -1 },
 };
 
 const TRIAL_DAYS = 3;
+
+function getLimits(plan: string) {
+  return PLAN_LIMITS[plan] ?? PLAN_LIMITS.FREE;
+}
 
 export async function createSubscription(userId: string) {
   const existing = await prisma.subscription.findUnique({ where: { userId } });
   if (existing) return existing;
 
-  const trialEndsAt = new Date();
-  trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
-
   return prisma.subscription.create({
     data: {
       userId,
       plan: "FREE",
-      status: "trial",
-      trialEndsAt,
+      status: "active",
+      trialEndsAt: null,
     },
   });
 }
@@ -32,12 +33,17 @@ export async function getSubscription(userId: string) {
     sub = await createSubscription(userId);
   }
 
-  // Auto-expire trial
-  if (sub.status === "trial" && sub.trialEndsAt && new Date() > sub.trialEndsAt) {
+  // Auto-expire PRO trial → revert to FREE
+  if (sub.status === "trial" && sub.plan === "PRO" && sub.trialEndsAt && new Date() > sub.trialEndsAt) {
     sub = await prisma.subscription.update({
       where: { id: sub.id },
-      data: { status: "active" },
+      data: { plan: "FREE", status: "active", trialEndsAt: null },
     });
+    // Also update User.plan
+    await prisma.user.update({
+      where: { id: userId },
+      data: { plan: "free" },
+    }).catch(() => { });
   }
 
   return {
@@ -47,7 +53,7 @@ export async function getSubscription(userId: string) {
     status: sub.status,
     trialEndsAt: sub.trialEndsAt,
     createdAt: sub.createdAt,
-    limits: PLAN_LIMITS[sub.plan] ?? PLAN_LIMITS.FREE,
+    limits: getLimits(sub.plan),
   };
 }
 
@@ -56,10 +62,13 @@ export async function activateTrial(userId: string) {
 
   if (!sub) {
     sub = await createSubscription(userId);
-    return getSubscription(userId);
   }
 
-  if (sub.status !== "active" && sub.status !== "expired") {
+  // Only allow trial if currently on FREE + active (not already trialing)
+  if (sub.plan === "PRO") {
+    throw new AppError(400, "You are already on PRO plan");
+  }
+  if (sub.status === "trial") {
     throw new AppError(400, "Trial is already active");
   }
 
@@ -70,6 +79,12 @@ export async function activateTrial(userId: string) {
     where: { id: sub.id },
     data: { plan: "PRO", status: "trial", trialEndsAt },
   });
+
+  // Update User.plan
+  await prisma.user.update({
+    where: { id: userId },
+    data: { plan: "pro" },
+  }).catch(() => { });
 
   return getSubscription(userId);
 }
@@ -85,34 +100,31 @@ export async function upgradePlan(userId: string, plan: string) {
     sub = await createSubscription(userId);
   }
 
+  // Block downgrade to FREE while PRO trial is active
+  if (plan === "FREE" && sub.plan === "PRO" && sub.status === "trial" && sub.trialEndsAt && new Date() < sub.trialEndsAt) {
+    throw new AppError(400, "Cannot switch to FREE while PRO trial is active. It will auto-revert when trial ends.");
+  }
+
   await prisma.subscription.update({
     where: { id: sub.id },
     data: { plan, status: "active", trialEndsAt: null },
   });
 
-  // Also update User.plan field for quick access
   await prisma.user.update({
     where: { id: userId },
     data: { plan: plan.toLowerCase() },
-  });
+  }).catch(() => { });
 
   return getSubscription(userId);
 }
 
 export async function checkLimits(userId: string) {
   const sub = await getSubscription(userId);
-  const limits = PLAN_LIMITS[sub.plan] ?? PLAN_LIMITS.FREE;
-
-  // Determine effective plan: during trial, use the trial plan's limits
-  const effectivePlan = sub.status === "trial" ? sub.plan : sub.plan;
 
   return {
     plan: sub.plan,
     status: sub.status,
     trialEndsAt: sub.trialEndsAt,
-    limits: {
-      maxWorkflows: limits.maxWorkflows === Infinity ? -1 : limits.maxWorkflows,
-      maxRuns: limits.maxRuns === Infinity ? -1 : limits.maxRuns,
-    },
+    limits: getLimits(sub.plan),
   };
 }
