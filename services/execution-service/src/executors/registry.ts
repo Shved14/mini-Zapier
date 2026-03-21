@@ -4,6 +4,7 @@ import { TelegramExecutor } from "./telegram.executor";
 import { EmailExecutor } from "./email.executor";
 import { DatabaseExecutor } from "./database.executor";
 import { TransformExecutor } from "./transform.executor";
+import { TriggerExecutor } from "./trigger.executor";
 
 const executors = new Map<string, BaseExecutor>();
 
@@ -15,6 +16,7 @@ register(new HttpExecutor());
 register(new TelegramExecutor());
 register(new EmailExecutor());
 register(new DatabaseExecutor());
+register(new TriggerExecutor());
 register(new TransformExecutor());
 
 export function getExecutor(type: string): BaseExecutor {
