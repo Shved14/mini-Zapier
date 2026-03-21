@@ -48,6 +48,8 @@ export async function registerUser(input: RegisterInput) {
       email: user.email,
       name: user.name,
       provider: user.provider,
+      avatarUrl: user.avatarUrl,
+      plan: user.plan,
       createdAt: user.createdAt,
     },
   };
@@ -77,6 +79,8 @@ export async function loginUser(input: LoginInput) {
       email: user.email,
       name: user.name,
       provider: user.provider,
+      avatarUrl: user.avatarUrl,
+      plan: user.plan,
       createdAt: user.createdAt,
     },
   };
@@ -96,6 +100,8 @@ export async function getMe(userId: string) {
     email: user.email,
     name: user.name,
     provider: user.provider,
+    avatarUrl: user.avatarUrl,
+    plan: user.plan,
     createdAt: user.createdAt,
   };
 }
@@ -114,10 +120,14 @@ export async function getUserByEmail(email: string) {
   };
 }
 
-export async function updateUser(userId: string, data: { name?: string }) {
+export async function updateUser(userId: string, data: { name?: string; avatarUrl?: string }) {
+  const updateData: Record<string, any> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
+
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { name: data.name },
+    data: updateData,
   });
 
   return {
@@ -125,6 +135,8 @@ export async function updateUser(userId: string, data: { name?: string }) {
     email: user.email,
     name: user.name,
     provider: user.provider,
+    avatarUrl: user.avatarUrl,
+    plan: user.plan,
     createdAt: user.createdAt,
   };
 }
@@ -153,6 +165,8 @@ export async function oauthLogin(input: OAuthInput) {
       email: user.email,
       name: user.name,
       provider: user.provider,
+      avatarUrl: user.avatarUrl,
+      plan: user.plan,
       createdAt: user.createdAt,
     },
   };

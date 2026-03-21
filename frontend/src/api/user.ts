@@ -4,6 +4,10 @@ export type MeResponse = {
   id: string;
   email: string;
   name?: string | null;
+  provider?: string;
+  avatarUrl?: string | null;
+  plan?: string;
+  createdAt?: string;
 };
 
 export const userApi = {
@@ -11,7 +15,7 @@ export const userApi = {
     const res = await api.get<MeResponse>("/auth/me");
     return res.data;
   },
-  async updateMe(data: { name?: string }) {
+  async updateMe(data: { name?: string; avatarUrl?: string }) {
     const res = await api.patch<MeResponse>("/auth/me", data);
     return res.data;
   },

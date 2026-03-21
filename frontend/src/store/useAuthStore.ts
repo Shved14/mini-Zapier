@@ -5,6 +5,10 @@ type User = {
   id: string;
   email: string;
   name?: string | null;
+  provider?: string;
+  avatarUrl?: string | null;
+  plan?: string;
+  createdAt?: string;
 };
 
 type AuthState = {
