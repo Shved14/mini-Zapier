@@ -21,6 +21,31 @@ export async function create(
   try {
     const user = (req as any).user;
     const { name, workflowJson } = req.body;
+
+    // Check subscription limits before creating
+    try {
+      const AUTH_URL = process.env.AUTH_SERVICE_URL || "http://auth-service:3001";
+      const limitsRes = await fetch(`${AUTH_URL}/auth/subscription/check-limits`, {
+        headers: { "X-User-ID": user.userId },
+      });
+      if (limitsRes.ok) {
+        const limits = await limitsRes.json() as any;
+        const maxWorkflows = limits.limits?.maxWorkflows ?? -1;
+        if (maxWorkflows > 0) {
+          const existing = await getWorkflowsByUser(user.userId);
+          if (existing.length >= maxWorkflows) {
+            res.status(403).json({
+              message: `Workflow limit reached (${maxWorkflows} on ${limits.plan} plan). Upgrade to PRO for unlimited workflows.`,
+              code: "WORKFLOW_LIMIT_REACHED",
+            });
+            return;
+          }
+        }
+      }
+    } catch (limitErr: any) {
+      console.warn(`Failed to check subscription limits: ${limitErr.message}`);
+    }
+
     const workflow = await createWorkflow({
       userId: user.userId,
       name,

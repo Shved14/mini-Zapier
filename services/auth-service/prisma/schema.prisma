@@ -30,7 +30,17 @@ model User {
   @@map("users")
 }
 
+model Subscription {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  plan        String   @default("FREE")
+  status      String   @default("trial")
+  trialEndsAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
+  @@map("subscriptions")
+}
 
 model VerificationCode {
 

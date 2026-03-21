@@ -1,5 +1,5 @@
 import React from "react";
-import { Zap, LayoutDashboard, Play, BarChart3, User, LogOut } from "lucide-react";
+import { Zap, LayoutDashboard, Play, BarChart3, User, Crown, LogOut } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 
 type LayoutProps = {
@@ -14,6 +14,7 @@ const navItems = [
   { id: "workflows", label: "Workflows", icon: LayoutDashboard },
   { id: "runs", label: "Runs", icon: Play },
   { id: "stats", label: "Statistics", icon: BarChart3 },
+  { id: "subscriptions", label: "Subscription", icon: Crown },
   { id: "profile", label: "Profile", icon: User },
 ];
 

@@ -1,6 +1,7 @@
 import { prisma } from "../utils/prisma";
 import { hashPassword, comparePassword } from "../utils/password";
 import { signToken } from "../utils/jwt";
+import { createSubscription } from "./subscription.service";
 
 interface RegisterInput {
   email: string;
@@ -38,6 +39,9 @@ export async function registerUser(input: RegisterInput) {
       provider: "local",
     },
   });
+
+  // Create FREE subscription with 3-day trial
+  await createSubscription(user.id);
 
   const token = signToken({ userId: user.id, email: user.email });
 
@@ -154,6 +158,9 @@ export async function oauthLogin(input: OAuthInput) {
         provider: input.provider,
       },
     });
+
+    // Create FREE subscription with 3-day trial for new OAuth users
+    await createSubscription(user.id);
   }
 
   const token = signToken({ userId: user.id, email: user.email });

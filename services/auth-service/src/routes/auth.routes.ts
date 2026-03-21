@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { register, verifyEmail, login, me, updateMe, getUserById, getUserByEmail, googleRedirect, googleCallback, githubRedirect, githubCallback } from "../controllers/auth.controller";
+import { getSubscriptionHandler, activateTrialHandler, upgradePlanHandler, checkLimitsHandler } from "../controllers/subscription.controller";
 import { authenticate } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 
@@ -37,5 +38,11 @@ router.get("/google", googleRedirect);
 router.get("/google/callback", googleCallback);
 router.get("/github", githubRedirect);
 router.get("/github/callback", githubCallback);
+
+// Subscription routes
+router.get("/subscription", authenticate, getSubscriptionHandler);
+router.post("/subscription/activate-trial", authenticate, activateTrialHandler);
+router.post("/subscription/upgrade", authenticate, upgradePlanHandler);
+router.get("/subscription/check-limits", checkLimitsHandler);
 
 export default router;

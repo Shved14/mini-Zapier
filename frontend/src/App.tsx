@@ -7,6 +7,7 @@ import { RunsPage } from "./pages/RunsPage";
 import { RunDetailPage } from "./pages/RunDetailPage";
 import { StatsPage } from "./pages/StatsPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { SubscriptionsPage } from "./pages/SubscriptionsPage";
 import { LandingPage } from "./pages/LandingPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { useAuthStore } from "./store/useAuthStore";
@@ -94,6 +95,7 @@ const ProtectedRoutes: React.FC = () => {
         />
         <Route path="/runs/:id" element={<RunDetailPage />} />
         <Route path="/stats" element={<StatsPage />} />
+        <Route path="/subscriptions" element={<SubscriptionsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/workflows" replace />} />
       </Routes>

@@ -62,6 +62,10 @@ router.use("/auth/github/callback", serviceProxy(AUTH_SERVICE_URL, "/auth/github
 // Protected auth routes — JWT required
 router.use("/auth/me", validateJwt, serviceProxy(AUTH_SERVICE_URL, "/auth/me"));
 
+// Subscription routes
+router.use("/auth/subscription/check-limits", serviceProxy(AUTH_SERVICE_URL, "/auth/subscription/check-limits"));
+router.use("/auth/subscription", validateJwt, serviceProxy(AUTH_SERVICE_URL, "/auth/subscription"));
+
 // Public invite routes — MUST be before the catch-all /workflows route
 // Use a custom proxy that preserves the full original path
 router.get("/workflows/invite/:token", (req, _res, next) => {

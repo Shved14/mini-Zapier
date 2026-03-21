@@ -50,6 +50,34 @@ app.post("/execute", async (req, res) => {
       return;
     }
 
+    // Check subscription limits before enqueuing
+    try {
+      const AUTH_URL = process.env.AUTH_SERVICE_URL || "http://auth-service:3001";
+      const limitsRes = await fetch(`${AUTH_URL}/auth/subscription/check-limits`, {
+        headers: { "X-User-ID": userId },
+      });
+      if (limitsRes.ok) {
+        const limits = await limitsRes.json() as any;
+        const maxRuns = limits.limits?.maxRuns ?? -1;
+        if (maxRuns > 0) {
+          const completed = await workflowQueue.getCompleted();
+          const active = await workflowQueue.getActive();
+          const waiting = await workflowQueue.getWaiting();
+          const allJobs = [...completed, ...active, ...waiting];
+          const userRunCount = allJobs.filter((j: any) => j.data?.userId === userId).length;
+          if (userRunCount >= maxRuns) {
+            res.status(403).json({
+              message: `Run limit reached (${maxRuns} runs on ${limits.plan} plan). Upgrade to PRO for unlimited runs.`,
+              code: "RUN_LIMIT_REACHED",
+            });
+            return;
+          }
+        }
+      }
+    } catch (limitErr: any) {
+      logger.warn(`Failed to check subscription limits: ${limitErr.message}`);
+    }
+
     const job = await workflowQueue.add(`workflow:${workflowId}`, {
       workflowId,
       userId,
