@@ -144,6 +144,16 @@ export async function update(
     // Get previous workflow for comparison
     const previousWorkflow = await getWorkflowById(id, user.userId);
 
+    // Save current version before updating (if workflowJson is changing)
+    if (workflowJson) {
+      try {
+        const { createVersion } = await import("../services/version.service");
+        await createVersion(id, previousWorkflow.workflowJson);
+      } catch (vErr: any) {
+        console.warn(`Failed to create version: ${vErr.message}`);
+      }
+    }
+
     const workflow = await updateWorkflow(id, user.userId, { name, workflowJson, slackWebhook });
 
     // Log workflow update

@@ -20,6 +20,7 @@ model Workflow {
   members      WorkflowMember[]
   activityLogs ActivityLog[]
   invitations  Invitation[]
+  versions     WorkflowVersion[]
 
   @@index([userId])
   @@map("workflows")
@@ -54,6 +55,19 @@ model ActivityLog {
   @@index([workflowId])
   @@index([userId])
   @@map("activity_logs")
+}
+
+model WorkflowVersion {
+  id           String   @id @default(cuid())
+  workflowId   String
+  version      Int
+  workflowJson Json
+  createdAt    DateTime @default(now())
+
+  workflow     Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@map("workflow_versions")
 }
 
 model Invitation {

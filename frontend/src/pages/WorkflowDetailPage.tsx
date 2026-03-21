@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowLeft, Play, Pause, Trash2, Save, Check, X,
-  FileText, Users, Settings, Activity,
+  FileText, Users, Settings, Activity, History,
 } from "lucide-react";
 import { workflowsApi, Workflow } from "../api/workflows";
 import { useAuthStore } from "../store/useAuthStore";
@@ -12,10 +12,12 @@ import { WorkflowEditor } from "../components/WorkflowEditor";
 import { MembersTab } from "../components/tabs/MembersTab";
 import { LogsTab } from "../components/LogsTab";
 import { SettingsTab } from "../components/tabs/SettingsTab";
+import { VersionsTab } from "../components/tabs/VersionsTab";
 import { useConfirmDialog } from "../components/ConfirmDialog";
 
 const allTabs = [
   { id: "editor", label: "Editor", icon: FileText, ownerOnly: false },
+  { id: "versions", label: "Versions", icon: History, ownerOnly: false },
   { id: "logs", label: "Logs", icon: Activity, ownerOnly: false },
   { id: "members", label: "Members", icon: Users, ownerOnly: true },
   { id: "settings", label: "Settings", icon: Settings, ownerOnly: true },
@@ -292,6 +294,15 @@ export const WorkflowDetailPage: React.FC = () => {
               setWorkflow((prev) => prev ? { ...prev, workflowJson } : prev);
             }}
             embedded
+          />
+        )}
+        {activeTab === "versions" && (
+          <VersionsTab
+            workflowId={workflow.id}
+            currentJson={workflow.workflowJson}
+            onRestore={(json) => {
+              setWorkflow((prev) => prev ? { ...prev, workflowJson: json } : prev);
+            }}
           />
         )}
         {activeTab === "logs" && <LogsTab workflowId={workflow.id} />}

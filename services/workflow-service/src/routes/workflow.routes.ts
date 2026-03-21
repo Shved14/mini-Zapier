@@ -58,6 +58,32 @@ router.post("/:id/activity", async (req, res, next) => {
   }
 });
 
+// Versions
+router.get("/:id/versions", authenticate, async (req, res, next) => {
+  try {
+    const { getVersions } = await import("../services/version.service");
+    const { id } = req.params;
+    const versions = await getVersions(id);
+    res.json(versions);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/restore/:versionId", authenticate, async (req, res, next) => {
+  try {
+    const { restoreVersion } = await import("../services/version.service");
+    const { logActivity } = await import("../services/activity.service");
+    const user = (req as any).user;
+    const { id, versionId } = req.params;
+    const workflow = await restoreVersion(id, versionId, user.userId);
+    await logActivity(id, user.userId, "version_restored", { versionId }, user.email);
+    res.json(workflow);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Members
 router.get("/:id/members", authenticate, listMembers);
 router.post("/:id/invite", authenticate, validate(inviteSchema), inviteEmail);

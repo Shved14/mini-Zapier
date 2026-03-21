@@ -124,6 +124,8 @@ function formatMessage(action: string, meta: any): string {
       return `${meta.email || user} left the workflow`;
     case "invite_accepted":
       return `${user} accepted the invite`;
+    case "version_restored":
+      return `${user} restored workflow to a previous version`;
     default:
       return `${user} performed ${action}`;
   }
