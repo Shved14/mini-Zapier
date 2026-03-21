@@ -78,7 +78,7 @@ export async function createInvitation(data: CreateInvitationData) {
     role: data.role,
   });
 
-  return invitation;
+  return { ...invitation, workflow: { id: workflow.id, name: workflow.name } };
 }
 
 export async function getInvitationByToken(token: string) {

@@ -45,6 +45,11 @@ export const membersApi = {
     return res.data;
   },
 
+  async declineInviteByToken(token: string) {
+    const res = await api.post(`/workflows/invite/${token}/decline`);
+    return res.data;
+  },
+
   async leave(workflowId: string) {
     const res = await api.post(`/workflows/${workflowId}/leave`);
     return res.data;

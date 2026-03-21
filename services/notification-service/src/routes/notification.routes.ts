@@ -27,6 +27,7 @@ const createInAppSchema = z.object({
   title: z.string().min(1).max(255),
   message: z.string().min(1),
   relatedId: z.string().optional(),
+  meta: z.record(z.any()).optional(),
 });
 
 const router = Router();

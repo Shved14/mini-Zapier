@@ -156,27 +156,45 @@ export async function update(
       const slackUrl = (workflow as any).slackWebhook;
 
       for (const node of addedNodes) {
+        const label = node.data?.label || node.type || 'node';
         await logActivity(id, user.userId, "node_added", {
           nodeId: node.id,
           nodeType: node.type || 'node'
         }, user.email);
+        createInAppNotification({
+          userId: user.userId,
+          type: "node_added",
+          title: "Node Added",
+          message: `Added "${label}" to "${workflow.name}"`,
+          relatedId: id,
+          meta: { nodeId: node.id, nodeType: node.type, workflowName: workflow.name },
+        }).catch(() => { });
         if (slackUrl) {
           notifySlack(slackUrl, "Node Added", `${user.email} added a node`, {
             "Workflow": workflow.name,
-            "Node": `\`${node.data?.label || node.type || 'node'}\` (\`${node.id}\`)`,
+            "Node": `\`${label}\` (\`${node.id}\`)`,
           });
         }
       }
 
       for (const node of deletedNodes) {
+        const label = node.data?.label || node.type || 'node';
         await logActivity(id, user.userId, "node_deleted", {
           nodeId: node.id,
           nodeType: node.type || 'node'
         }, user.email);
+        createInAppNotification({
+          userId: user.userId,
+          type: "node_deleted",
+          title: "Node Removed",
+          message: `Removed "${label}" from "${workflow.name}"`,
+          relatedId: id,
+          meta: { nodeId: node.id, nodeType: node.type, workflowName: workflow.name },
+        }).catch(() => { });
         if (slackUrl) {
           notifySlack(slackUrl, "Node Removed", `${user.email} removed a node`, {
             "Workflow": workflow.name,
-            "Node": `\`${node.data?.label || node.type || 'node'}\` (\`${node.id}\`)`,
+            "Node": `\`${label}\` (\`${node.id}\`)`,
           });
         }
       }
@@ -185,15 +203,24 @@ export async function update(
       for (const currNode of currNodes) {
         const prevNode = prevNodes.find((p: any) => p.id === currNode.id);
         if (prevNode && JSON.stringify(prevNode.data) !== JSON.stringify(currNode.data)) {
+          const label = currNode.data?.label || currNode.type || 'node';
           await logActivity(id, user.userId, "node_config_updated", {
             nodeId: currNode.id,
             nodeType: currNode.type || 'node',
             configField: 'configuration'
           }, user.email);
+          createInAppNotification({
+            userId: user.userId,
+            type: "node_updated",
+            title: "Node Updated",
+            message: `Updated "${label}" in "${workflow.name}"`,
+            relatedId: id,
+            meta: { nodeId: currNode.id, nodeType: currNode.type, workflowName: workflow.name },
+          }).catch(() => { });
           if (slackUrl) {
             notifySlack(slackUrl, "Config Updated", `${user.email} updated node config`, {
               "Workflow": workflow.name,
-              "Node": `\`${currNode.data?.label || currNode.type || 'node'}\` (\`${currNode.id}\`)`,
+              "Node": `\`${label}\` (\`${currNode.id}\`)`,
             });
           }
         }

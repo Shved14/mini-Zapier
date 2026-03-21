@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { createInvitation, getInvitationByToken, acceptInvitation, declineInvitation, cancelInvitation as cancelInvitationService, getInvitationsForWorkflow } from "../services/invitation.service";
 import { AppError } from "../services/workflow.service";
-import { createInAppNotification } from "../services/notification.service";
+import { createInAppNotification, lookupUserByEmail } from "../services/notification.service";
 
 export async function invite(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -20,19 +20,37 @@ export async function invite(req: Request, res: Response, next: NextFunction): P
       inviterUserId: user.userId,
     });
 
-    // Create in-app notification for the inviter
-    try {
-      await createInAppNotification({
-        userId: user.userId,
-        type: 'workflow_invite_sent',
-        title: 'Invitation Sent',
-        message: `Invitation sent to ${email} for workflow`,
-        relatedId: invitation.id,
-      });
-    } catch (notifError) {
-      console.error('Failed to create in-app notification:', notifError);
-      // Don't fail the request if notification fails
-    }
+    // Get workflow name for notifications
+    const workflowName = invitation.workflow?.name || "a workflow";
+
+    // Notify the inviter
+    createInAppNotification({
+      userId: user.userId,
+      type: "workflow_invite_sent",
+      title: "Invitation Sent",
+      message: `Invitation sent to ${email} for "${workflowName}"`,
+      relatedId: workflowId,
+    }).catch(() => { });
+
+    // Notify the invited user (if they have an account)
+    lookupUserByEmail(email.toLowerCase()).then((invitedUser) => {
+      if (invitedUser) {
+        createInAppNotification({
+          userId: invitedUser.id,
+          type: "workflow_invite",
+          title: "Workflow Invitation",
+          message: `You've been invited to join "${workflowName}" as ${role}`,
+          relatedId: workflowId,
+          meta: {
+            inviteToken: invitation.token,
+            workflowId,
+            workflowName,
+            role,
+            inviterEmail: user.email,
+          },
+        }).catch(() => { });
+      }
+    }).catch(() => { });
 
     res.status(201).json({
       message: "Invitation sent successfully",

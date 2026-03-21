@@ -3,6 +3,7 @@ import { redisConnection } from "./connection";
 import { WORKFLOW_QUEUE_NAME, WorkflowJobData } from "./workflow.queue";
 import { runWorkflow } from "../engine/runner";
 import { logger } from "../utils/logger";
+import { createInAppNotification } from "../utils/notify";
 
 export function startWorker(): Worker {
   const worker = new Worker<WorkflowJobData>(
@@ -45,6 +46,29 @@ export function startWorker(): Worker {
       // Update progress
       await job.updateProgress(100);
 
+      // Send completion/failure notification
+      const wfName = jobData.workflowName || "Workflow";
+      if (result.status === "completed") {
+        createInAppNotification({
+          userId: jobData.userId,
+          type: "workflow_success",
+          title: "Workflow Completed",
+          message: `"${wfName}" finished successfully (${result.totalDurationMs}ms)`,
+          relatedId: jobData.workflowId,
+          meta: { workflowName: wfName, durationMs: result.totalDurationMs, nodesExecuted: result.logs.length },
+        }).catch(() => { });
+      } else {
+        const lastErr = result.logs[result.logs.length - 1]?.error || "Unknown error";
+        createInAppNotification({
+          userId: jobData.userId,
+          type: "workflow_failed",
+          title: "Workflow Failed",
+          message: `"${wfName}" failed: ${lastErr}`,
+          relatedId: jobData.workflowId,
+          meta: { workflowName: wfName, error: lastErr, durationMs: result.totalDurationMs },
+        }).catch(() => { });
+      }
+
       // Don't throw — return result so it's available via returnvalue
       // The workflow status (completed/failed) is tracked inside the result
       return result;
@@ -68,6 +92,16 @@ export function startWorker(): Worker {
       workflowId: job?.data.workflowId,
       attempt: job?.attemptsMade,
     });
+    if (job) {
+      createInAppNotification({
+        userId: job.data.userId,
+        type: "workflow_failed",
+        title: "Workflow Failed",
+        message: `"${job.data.workflowName || "Workflow"}" crashed: ${err.message}`,
+        relatedId: job.data.workflowId,
+        meta: { workflowName: job.data.workflowName, error: err.message },
+      }).catch(() => { });
+    }
   });
 
   worker.on("error", (err) => {

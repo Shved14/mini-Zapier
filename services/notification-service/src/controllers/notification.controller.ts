@@ -21,8 +21,8 @@ export async function create(req: Request, res: Response, next: NextFunction): P
 
 export async function createInAppHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { userId, type, title, message, relatedId } = req.body;
-    const notification = await createInApp({ userId, type, title, message, relatedId });
+    const { userId, type, title, message, relatedId, meta } = req.body;
+    const notification = await createInApp({ userId, type, title, message, relatedId, meta });
     res.status(201).json(notification);
   } catch (error) {
     next(error);

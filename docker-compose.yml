@@ -118,6 +118,8 @@ services:
 
       NOTIFICATION_SERVICE_URL: http://notification-service:3006
 
+      AUTH_SERVICE_URL: http://auth-service:3001
+
     depends_on:
 
       postgres:
@@ -145,6 +147,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-super-secret-change-me}
 
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+      NOTIFICATION_SERVICE_URL: http://notification-service:3006
     depends_on:
 
       - redis

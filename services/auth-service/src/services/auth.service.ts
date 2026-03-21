@@ -100,6 +100,20 @@ export async function getMe(userId: string) {
   };
 }
 
+export async function getUserByEmail(email: string) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) return null;
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+  };
+}
+
 export async function updateUser(userId: string, data: { name?: string }) {
   const user = await prisma.user.update({
     where: { id: userId },

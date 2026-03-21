@@ -1,5 +1,19 @@
 import { api } from "./client";
 
+export type NotificationMeta = {
+  inviteToken?: string;
+  workflowId?: string;
+  workflowName?: string;
+  role?: string;
+  inviterEmail?: string;
+  nodeId?: string;
+  nodeType?: string;
+  durationMs?: number;
+  nodesExecuted?: number;
+  error?: string;
+  [key: string]: any;
+};
+
 export type Notification = {
   id: string;
   userId: string;
@@ -7,6 +21,7 @@ export type Notification = {
   channel: string;
   title: string;
   message: string;
+  meta: NotificationMeta | null;
   read: boolean;
   relatedId: string | null;
   status: string;

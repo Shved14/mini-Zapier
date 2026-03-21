@@ -10,10 +10,11 @@ datasource db {
 model Notification {
   id         String   @id @default(cuid())
   userId     String
-  type       String   // workflow_invite | workflow_action | trial_expiring
+  type       String   // workflow_invite | node_added | node_deleted | node_updated | workflow_run_started | workflow_success | workflow_failed | ...
   channel    String   @default("in_app") // in_app | telegram | email
   title      String
   message    String
+  meta       Json?    // arbitrary JSON payload (e.g. inviteToken, workflowId, nodeId)
   read       Boolean  @default(false)
   relatedId  String?  // workflowId or memberId for actions
   status     String   @default("pending") // pending | sent | failed

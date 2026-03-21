@@ -5,6 +5,7 @@ import {
   getMe,
   updateUser,
   oauthLogin,
+  getUserByEmail as getUserByEmailService,
   AppError,
 } from "../services/auth.service";
 import { sendVerificationCode, generateVerificationCode } from "../services/email.service";
@@ -98,6 +99,24 @@ export async function getUserById(
   try {
     const { id } = req.params;
     const result = await getMe(id);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getUserByEmail(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { email } = req.params;
+    const result = await getUserByEmailService(email);
+    if (!result) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
     res.json(result);
   } catch (error) {
     next(error);

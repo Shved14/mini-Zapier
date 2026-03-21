@@ -100,6 +100,7 @@ export async function createInApp(input: {
   title: string;
   message: string;
   relatedId?: string;
+  meta?: Record<string, any>;
 }) {
   return prisma.notification.create({
     data: {
@@ -109,6 +110,7 @@ export async function createInApp(input: {
       title: input.title,
       message: input.message,
       relatedId: input.relatedId,
+      meta: input.meta ?? undefined,
       status: "sent",
       sentAt: new Date(),
     },

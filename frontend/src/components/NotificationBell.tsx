@@ -1,40 +1,49 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Bell, Check, CheckCheck, X } from "lucide-react";
+import { Bell, Check, CheckCheck, UserPlus, Zap, Play, CheckCircle, XCircle, Plus, Trash2, Settings } from "lucide-react";
 import { notificationsApi, Notification } from "../api/notifications";
 import { membersApi } from "../api/members";
+
+const typeIcon: Record<string, React.ReactNode> = {
+  workflow_invite: <UserPlus className="h-4 w-4 text-purple-400" />,
+  workflow_invite_sent: <UserPlus className="h-4 w-4 text-blue-400" />,
+  workflow_invite_accepted: <CheckCircle className="h-4 w-4 text-emerald-400" />,
+  workflow_invite_declined: <XCircle className="h-4 w-4 text-red-400" />,
+  workflow_created: <Zap className="h-4 w-4 text-amber-400" />,
+  workflow_run_started: <Play className="h-4 w-4 text-blue-400" />,
+  workflow_success: <CheckCircle className="h-4 w-4 text-emerald-400" />,
+  workflow_failed: <XCircle className="h-4 w-4 text-red-400" />,
+  node_added: <Plus className="h-4 w-4 text-emerald-400" />,
+  node_deleted: <Trash2 className="h-4 w-4 text-red-400" />,
+  node_updated: <Settings className="h-4 w-4 text-blue-400" />,
+};
 
 export const NotificationBell: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
-    setLoading(true);
     try {
       const data = await notificationsApi.list();
       setNotifications(data);
       setUnreadCount(data.filter((n) => !n.read).length);
     } catch {
-      setNotifications([]);
-      setUnreadCount(0);
-    } finally {
-      setLoading(false);
+      /* silently fail */
     }
   };
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 10000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -57,28 +66,45 @@ export const NotificationBell: React.FC = () => {
   };
 
   const handleAcceptInvite = async (n: Notification) => {
-    if (!n.relatedId) return;
+    const token = n.meta?.inviteToken;
+    if (!token) return;
+    setActionLoading(n.id);
     try {
-      // relatedId format: workflowId:memberId
-      const [workflowId, memberId] = n.relatedId.split(":");
-      if (workflowId && memberId) {
-        await membersApi.acceptInvite(workflowId, memberId);
-        await handleMarkRead(n.id);
-        fetchNotifications();
-      }
+      await membersApi.acceptInviteByToken(token);
+      await handleMarkRead(n.id);
+      fetchNotifications();
     } catch { /* silently fail */ }
+    setActionLoading(null);
   };
 
   const handleDeclineInvite = async (n: Notification) => {
-    if (!n.relatedId) return;
+    const token = n.meta?.inviteToken;
+    if (!token) return;
+    setActionLoading(n.id);
     try {
-      const [workflowId, memberId] = n.relatedId.split(":");
-      if (workflowId && memberId) {
-        await membersApi.declineInvite(workflowId, memberId);
-        await handleMarkRead(n.id);
-        fetchNotifications();
-      }
+      await membersApi.declineInviteByToken(token);
+      await handleMarkRead(n.id);
+      fetchNotifications();
     } catch { /* silently fail */ }
+    setActionLoading(null);
+  };
+
+  const handleNotificationClick = (n: Notification) => {
+    if (!n.read) handleMarkRead(n.id);
+    if (n.relatedId && n.type !== "workflow_invite") {
+      window.location.href = `/workflows/${n.relatedId}`;
+    }
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
   };
 
   return (
@@ -96,7 +122,7 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-h-96 bg-slate-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+        <div className="absolute right-0 top-full mt-2 w-96 max-h-[28rem] bg-slate-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
             <h4 className="text-sm font-semibold text-white">Notifications</h4>
             {unreadCount > 0 && (
@@ -109,59 +135,64 @@ export const NotificationBell: React.FC = () => {
             )}
           </div>
 
-          <div className="overflow-y-auto max-h-72">
+          <div className="overflow-y-auto max-h-96">
             {loading && notifications.length === 0 && (
               <div className="px-4 py-6 text-center text-sm text-gray-500 animate-pulse">Loading...</div>
             )}
             {!loading && notifications.length === 0 && (
-              <div className="px-4 py-6 text-center text-sm text-gray-500">
-                No notifications yet
-              </div>
+              <div className="px-4 py-8 text-center text-sm text-gray-500">No notifications yet</div>
             )}
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
-                  !n.read ? "bg-purple-500/5" : ""
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  {!n.read && <div className="w-2 h-2 mt-1.5 rounded-full bg-purple-500 shrink-0" />}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white">{n.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{n.message}</p>
-                    <div className="text-xs text-gray-600 mt-1">
-                      {new Date(n.createdAt).toLocaleString()}
+            {notifications.map((n) => {
+              const isInvite = n.type === "workflow_invite" && !n.read && n.meta?.inviteToken;
+              return (
+                <div
+                  key={n.id}
+                  onClick={() => !isInvite && handleNotificationClick(n)}
+                  className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${!n.read ? "bg-purple-500/5" : ""
+                    } ${!isInvite ? "cursor-pointer" : ""}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                      {typeIcon[n.type] || <Bell className="h-4 w-4 text-gray-400" />}
                     </div>
-                    {n.type === "workflow_invite" && !n.read && n.relatedId && (
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={() => handleAcceptInvite(n)}
-                          className="px-3 py-1 text-xs rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 transition-all"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleDeclineInvite(n)}
-                          className="px-3 py-1 text-xs rounded-md bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 transition-all"
-                        >
-                          Decline
-                        </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className={`text-sm font-medium ${!n.read ? "text-white" : "text-gray-300"}`}>{n.title}</p>
+                        <span className="text-[10px] text-gray-600 shrink-0 ml-2">{timeAgo(n.createdAt)}</span>
                       </div>
+                      <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{n.message}</p>
+                      {isInvite && (
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleAcceptInvite(n); }}
+                            disabled={actionLoading === n.id}
+                            className="px-3 py-1 text-xs rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 transition-all disabled:opacity-50"
+                          >
+                            {actionLoading === n.id ? "..." : "Accept"}
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeclineInvite(n); }}
+                            disabled={actionLoading === n.id}
+                            className="px-3 py-1 text-xs rounded-md bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 transition-all disabled:opacity-50"
+                          >
+                            {actionLoading === n.id ? "..." : "Decline"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {!n.read && !isInvite && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}
+                        className="shrink-0 p-1 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+                        title="Mark as read"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
                     )}
                   </div>
-                  {!n.read && n.type !== "workflow_invite" && (
-                    <button
-                      onClick={() => handleMarkRead(n.id)}
-                      className="shrink-0 p-1 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
-                      title="Mark as read"
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
