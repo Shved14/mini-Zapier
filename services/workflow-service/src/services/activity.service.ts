@@ -112,6 +112,10 @@ function formatMessage(action: string, meta: any): string {
       return `${user} updated workflow settings`;
     case "workflow_run_started":
       return `${user} started workflow execution`;
+    case "workflow_run_completed":
+      return `Workflow "${meta.workflowName || ""}" completed successfully${meta.durationMs ? ` (${meta.durationMs}ms)` : ""}`;
+    case "workflow_run_failed":
+      return `Workflow "${meta.workflowName || ""}" failed${meta.error ? `: ${meta.error}` : ""}`;
     case "member_invited":
       return `${user} invited ${meta.email || "someone"}`;
     case "member_joined":

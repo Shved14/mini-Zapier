@@ -4,6 +4,7 @@ import { WORKFLOW_QUEUE_NAME, WorkflowJobData } from "./workflow.queue";
 import { runWorkflow } from "../engine/runner";
 import { logger } from "../utils/logger";
 import { createInAppNotification } from "../utils/notify";
+import { logActivityToWorkflowService } from "../utils/activityLog";
 
 export function startWorker(): Worker {
   const worker = new Worker<WorkflowJobData>(
@@ -46,7 +47,7 @@ export function startWorker(): Worker {
       // Update progress
       await job.updateProgress(100);
 
-      // Send completion/failure notification
+      // Send completion/failure notification + activity log
       const wfName = jobData.workflowName || "Workflow";
       if (result.status === "completed") {
         createInAppNotification({
@@ -57,6 +58,9 @@ export function startWorker(): Worker {
           relatedId: jobData.workflowId,
           meta: { workflowName: wfName, durationMs: result.totalDurationMs, nodesExecuted: result.logs.length },
         }).catch(() => { });
+        logActivityToWorkflowService(jobData.workflowId, jobData.userId, "workflow_run_completed", {
+          workflowName: wfName, durationMs: result.totalDurationMs, nodesExecuted: result.logs.length,
+        }).catch(() => { });
       } else {
         const lastErr = result.logs[result.logs.length - 1]?.error || "Unknown error";
         createInAppNotification({
@@ -66,6 +70,9 @@ export function startWorker(): Worker {
           message: `"${wfName}" failed: ${lastErr}`,
           relatedId: jobData.workflowId,
           meta: { workflowName: wfName, error: lastErr, durationMs: result.totalDurationMs },
+        }).catch(() => { });
+        logActivityToWorkflowService(jobData.workflowId, jobData.userId, "workflow_run_failed", {
+          workflowName: wfName, error: lastErr, durationMs: result.totalDurationMs,
         }).catch(() => { });
       }
 

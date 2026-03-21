@@ -41,6 +41,23 @@ router.delete("/:id", authenticate, remove);
 // Activity logs
 router.get("/:id/logs", authenticate, listLogs);
 
+// Internal activity log endpoint (service-to-service, no JWT)
+router.post("/:id/activity", async (req, res, next) => {
+  try {
+    const { logActivity } = await import("../services/activity.service");
+    const { id } = req.params;
+    const { userId, action, metadata } = req.body;
+    if (!userId || !action) {
+      res.status(400).json({ message: "userId and action are required" });
+      return;
+    }
+    await logActivity(id, userId, action, metadata || {});
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Members
 router.get("/:id/members", authenticate, listMembers);
 router.post("/:id/invite", authenticate, validate(inviteSchema), inviteEmail);

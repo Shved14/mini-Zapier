@@ -153,6 +153,8 @@ services:
       NOTIFICATION_SERVICE_URL: http://notification-service:3006
 
       AUTH_SERVICE_URL: http://auth-service:3001
+
+      WORKFLOW_SERVICE_URL: http://workflow-service:3002
     depends_on:
 
       - redis
