@@ -1,6 +1,7 @@
-import React from "react";
-import { Zap, LayoutDashboard, Play, BarChart3, User, Crown, LogOut } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Zap, LayoutDashboard, Play, BarChart3, User, Crown, LogOut, Clock } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
+import { subscriptionApi, Subscription } from "../api/subscription";
 
 type LayoutProps = {
   currentPage: string;
@@ -25,6 +26,18 @@ export const Layout: React.FC<LayoutProps> = ({
   onBackToLanding,
   onLogout,
 }) => {
+  const [sub, setSub] = useState<Subscription | null>(null);
+
+  useEffect(() => {
+    subscriptionApi.get().then(setSub).catch(() => { });
+  }, []);
+
+  const trialActive = sub?.status === "trial" && sub?.plan === "PRO";
+  const trialEndsAt = sub?.trialEndsAt ? new Date(sub.trialEndsAt) : null;
+  const trialExpired = trialEndsAt ? new Date() > trialEndsAt : false;
+  const trialDaysLeft = trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000)) : 0;
+  const trialHoursLeft = trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 3600000)) : 0;
+  const showTrialBanner = trialActive && !trialExpired;
 
   return (
     <div className="min-h-screen flex bg-slate-950 text-slate-50">
@@ -89,6 +102,23 @@ export const Layout: React.FC<LayoutProps> = ({
             <NotificationBell />
           </div>
         </header>
+        {showTrialBanner && (
+          <div className="px-6 py-2.5 bg-gradient-to-r from-amber-500/10 to-purple-500/10 border-b border-amber-500/20 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="h-4 w-4 text-amber-400" />
+              <span className="text-amber-300">
+                PRO trial ends in{" "}
+                <strong>{trialDaysLeft > 0 ? `${trialDaysLeft} day${trialDaysLeft > 1 ? "s" : ""}` : `${trialHoursLeft} hour${trialHoursLeft > 1 ? "s" : ""}`}</strong>
+              </span>
+            </div>
+            <button
+              onClick={() => onChangePage("subscriptions")}
+              className="text-xs px-3 py-1 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-medium transition-colors"
+            >
+              Upgrade
+            </button>
+          </div>
+        )}
         <section className="flex-1 p-6 overflow-y-auto">
           {children}
         </section>

@@ -90,6 +90,8 @@ services:
 
       SMTP_FROM: ${SMTP_FROM:-onboarding@resend.dev}
 
+      NOTIFICATION_SERVICE_URL: http://notification-service:3006
+
     depends_on:
 
       postgres:

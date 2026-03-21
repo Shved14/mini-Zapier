@@ -66,6 +66,15 @@ app.post("/execute", async (req, res) => {
           const allJobs = [...completed, ...active, ...waiting];
           const userRunCount = allJobs.filter((j: any) => j.data?.userId === userId).length;
           if (userRunCount >= maxRuns) {
+            // Send limit-reached notification
+            const { createInAppNotification } = await import("./utils/notify");
+            createInAppNotification({
+              userId,
+              type: "limit_reached",
+              title: "Run Limit Reached",
+              message: `You've used all ${maxRuns} runs on your ${limits.plan} plan. Upgrade to PRO for unlimited runs.`,
+            }).catch(() => { });
+
             res.status(403).json({
               message: `Run limit reached (${maxRuns} runs on ${limits.plan} plan). Upgrade to PRO for unlimited runs.`,
               code: "RUN_LIMIT_REACHED",

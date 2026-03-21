@@ -1,5 +1,6 @@
 import { prisma } from "../utils/prisma";
 import { AppError } from "./auth.service";
+import { createInAppNotification } from "./notify.service";
 
 const PLAN_LIMITS: Record<string, { maxWorkflows: number; maxRuns: number }> = {
   FREE: { maxWorkflows: 1, maxRuns: 10 },
@@ -39,11 +40,31 @@ export async function getSubscription(userId: string) {
       where: { id: sub.id },
       data: { plan: "FREE", status: "active", trialEndsAt: null },
     });
-    // Also update User.plan
     await prisma.user.update({
       where: { id: userId },
       data: { plan: "free" },
     }).catch(() => { });
+
+    // Notify: trial expired
+    createInAppNotification({
+      userId,
+      type: "trial_expired",
+      title: "PRO Trial Expired",
+      message: "Your PRO trial has ended. You've been switched back to the Free plan.",
+    }).catch(() => { });
+  }
+
+  // Notify: trial ending soon (<=1 day left)
+  if (sub.status === "trial" && sub.plan === "PRO" && sub.trialEndsAt) {
+    const hoursLeft = (sub.trialEndsAt.getTime() - Date.now()) / 3600000;
+    if (hoursLeft > 0 && hoursLeft <= 24) {
+      createInAppNotification({
+        userId,
+        type: "trial_expiring",
+        title: "PRO Trial Ending Soon",
+        message: `Your PRO trial ends in less than ${Math.ceil(hoursLeft)} hours. Upgrade to keep unlimited access.`,
+      }).catch(() => { });
+    }
   }
 
   return {
