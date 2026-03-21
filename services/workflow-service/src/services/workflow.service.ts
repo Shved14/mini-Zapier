@@ -105,13 +105,21 @@ export async function createWorkflow(input: CreateWorkflowInput) {
 }
 
 export async function updateWorkflow(id: string, userId: string, data: { name?: string; workflowJson?: unknown; slackWebhook?: string }) {
-  const workflow = await prisma.workflow.findUnique({ where: { id } });
+  const workflow = await prisma.workflow.findUnique({
+    where: { id },
+    include: { members: true },
+  });
 
   if (!workflow) {
     throw new AppError(404, "Workflow not found");
   }
 
-  if (workflow.userId !== userId) {
+  const isOwner = workflow.userId === userId;
+  const isEditor = workflow.members.some(
+    (m) => m.userId === userId && m.status === "accepted" && (m.role === "editor" || m.role === "admin")
+  );
+
+  if (!isOwner && !isEditor) {
     throw new AppError(403, "You do not have permission to update this workflow");
   }
 
