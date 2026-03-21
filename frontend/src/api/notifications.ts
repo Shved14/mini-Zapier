@@ -48,4 +48,14 @@ export const notificationsApi = {
     const res = await api.post("/notifications/me/read-all");
     return res.data;
   },
+
+  async getPreferences(): Promise<Record<string, boolean>> {
+    const res = await api.get<Record<string, boolean>>("/notifications/me/preferences");
+    return res.data;
+  },
+
+  async updatePreferences(prefs: Record<string, boolean>): Promise<Record<string, boolean>> {
+    const res = await api.put<Record<string, boolean>>("/notifications/me/preferences", prefs);
+    return res.data;
+  },
 };

@@ -94,6 +94,47 @@ export async function markAllRead(userId: string) {
   return { message: "All notifications marked as read" };
 }
 
+// ── Notification Preferences ──
+
+const DEFAULT_PREFS: Record<string, boolean> = {
+  workflow_invite: true,
+  invite_accepted: true,
+  workflow_created: true,
+  node_added: true,
+  node_deleted: true,
+  node_updated: true,
+  workflow_run_started: true,
+  workflow_success: true,
+  workflow_failed: true,
+};
+
+export async function getPreferences(userId: string) {
+  const row = await prisma.notificationPreference.findUnique({ where: { userId } });
+  const saved = (row?.prefs ?? {}) as Record<string, boolean>;
+  return { ...DEFAULT_PREFS, ...saved };
+}
+
+export async function updatePreferences(userId: string, prefs: Record<string, boolean>) {
+  // Merge with defaults so only known keys are stored
+  const merged: Record<string, boolean> = {};
+  for (const key of Object.keys(DEFAULT_PREFS)) {
+    merged[key] = prefs[key] !== undefined ? prefs[key] : DEFAULT_PREFS[key];
+  }
+  return prisma.notificationPreference.upsert({
+    where: { userId },
+    update: { prefs: merged },
+    create: { userId, prefs: merged },
+  });
+}
+
+async function isTypeEnabled(userId: string, type: string): Promise<boolean> {
+  const prefs = await getPreferences(userId);
+  // If type is not in prefs, default to enabled
+  return prefs[type] !== false;
+}
+
+// ── Create In-App Notification ──
+
 export async function createInApp(input: {
   userId: string;
   type: string;
@@ -102,6 +143,10 @@ export async function createInApp(input: {
   relatedId?: string;
   meta?: Record<string, any>;
 }) {
+  // Check user preferences — skip if this type is disabled
+  const enabled = await isTypeEnabled(input.userId, input.type);
+  if (!enabled) return null;
+
   return prisma.notification.create({
     data: {
       userId: input.userId,

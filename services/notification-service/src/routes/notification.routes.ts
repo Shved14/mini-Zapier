@@ -8,6 +8,8 @@ import {
   unreadCount,
   markRead,
   markAllRead,
+  getPreferencesHandler,
+  updatePreferencesHandler,
 } from "../controllers/notification.controller";
 import { validate } from "../middleware/validate";
 import { authenticate } from "../middleware/auth";
@@ -42,5 +44,9 @@ router.get("/me", authenticate, listMine);
 router.get("/me/unread-count", authenticate, unreadCount);
 router.patch("/:id/read", authenticate, markRead);
 router.post("/me/read-all", authenticate, markAllRead);
+
+// Notification preferences
+router.get("/me/preferences", authenticate, getPreferencesHandler);
+router.put("/me/preferences", authenticate, updatePreferencesHandler);
 
 export default router;

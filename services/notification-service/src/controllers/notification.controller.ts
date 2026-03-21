@@ -6,6 +6,8 @@ import {
   markRead as markReadService,
   markAllRead as markAllReadService,
   createInApp,
+  getPreferences as getPrefsService,
+  updatePreferences as updatePrefsService,
   AppError,
 } from "../services/notification.service";
 
@@ -94,6 +96,30 @@ export async function markAllRead(req: Request, res: Response, next: NextFunctio
     }
     const result = await markAllReadService(userId);
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getPreferencesHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) { res.status(401).json({ message: "Unauthorized" }); return; }
+    const prefs = await getPrefsService(userId);
+    res.json(prefs);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updatePreferencesHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) { res.status(401).json({ message: "Unauthorized" }); return; }
+    const prefs = req.body;
+    await updatePrefsService(userId, prefs);
+    const updated = await getPrefsService(userId);
+    res.json(updated);
   } catch (error) {
     next(error);
   }

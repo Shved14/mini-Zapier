@@ -27,3 +27,13 @@ model Notification {
   @@index([userId, read])
   @@map("notifications")
 }
+
+model NotificationPreference {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  prefs     Json     @default("{}")  // { "node_added": false, "node_deleted": true, ... }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
